@@ -1,9 +1,10 @@
 package Main.checkers;
 
+import Main.DTO.InputFileDTO;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Scanner;
 
 public class RCPFileChecker implements FileChecker {
@@ -12,6 +13,11 @@ public class RCPFileChecker implements FileChecker {
     @Override
     public void setFile(String filename) {
             filePath = filename;
+    }
+    public void setFile(InputFileDTO fileInfo) {
+        String filename = fileInfo.getPath() + "j" + fileInfo.getProblemClass() + fileInfo.getDecNum() + "_" +
+                            fileInfo.getPosition() + "." + fileInfo.getExtension();
+        this.setFile(filename);
     }
 
     @Override
