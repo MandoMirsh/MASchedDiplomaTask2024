@@ -1,5 +1,6 @@
 package Main.solvers;
 
+import Main.loggers.LogHandler;
 import Main.models.ProblemModel;
 
 public interface Solver {
@@ -11,4 +12,5 @@ public interface Solver {
     //in progress or ready. Might be boolean?
     public int getLongevity ();
     //0 when not ready, but also can be zero if no time needed
+    public void setLogger(LogHandler logger);
 }
