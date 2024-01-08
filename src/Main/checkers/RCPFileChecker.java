@@ -14,6 +14,7 @@ public class RCPFileChecker implements FileChecker {
     public void setFile(String filename) {
             filePath = filename;
     }
+    @Override
     public void setFile(InputFileDTO fileInfo) {
         String filename = fileInfo.getPath() + "j" + fileInfo.getProblemClass() + fileInfo.getDecNum() + "_" +
                             fileInfo.getPosition() + "." + fileInfo.getExtension();
@@ -96,6 +97,6 @@ public class RCPFileChecker implements FileChecker {
 
     }
     public RCPFileChecker(String filename) {
-
+            filePath = filename;
     }
 }
