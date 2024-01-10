@@ -17,9 +17,8 @@ public class TaskModel {
     public int getResourceNeed (int resPos) {
         return resourceNeed.get(resPos-1);
     }
-    public void setTimeNeed( int time) {
-        timeNeed = time;
-    }
+    public ArrayList<Integer> getResourceNeed() { return  new ArrayList<Integer>(resourceNeed);}
+    public void setTimeNeed( int time) { timeNeed = time; }
     public int getTimeNeed(){
         return timeNeed;
     }
