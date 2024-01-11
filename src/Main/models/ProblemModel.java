@@ -17,6 +17,9 @@ public class ProblemModel {
     public int getRes(int resPos) {
         return rNum.get(resPos - 1);
     }
+    public ArrayList<Integer> getResources() {
+        return new ArrayList<Integer>(rNum);
+    }
     public void addTask(TaskModel task, int taskId) {
         tasks.add(taskId, task);
     }
