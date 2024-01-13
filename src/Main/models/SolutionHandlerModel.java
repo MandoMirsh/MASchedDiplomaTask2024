@@ -5,6 +5,7 @@ import Main.Marker;
 import Main.loggers.LogHandler;
 import Main.readers.FileReader;
 import Main.readers.RCPFileReader;
+import Main.solvers.GreedySolver;
 import Main.solvers.MockSolver;
 import Main.solvers.Solver;
 import Main.checkers.*;
@@ -13,7 +14,6 @@ public class SolutionHandlerModel {
     private ProblemModel currentProblem;
     private FileChecker currentChecker;
     private FileReader currentReader;
-    private Marker marker = new Marker();
     private SolutionControllerTaskDTO commonTask;
     public static final int SOL_SET_TASK_PLEASE = 0, SOL_READY = 1, SOL_IN_PROGRESS = 2, SOL_CHECKS = 3;
     private LogHandler log, results;
@@ -32,8 +32,8 @@ public class SolutionHandlerModel {
             currentProblem = currentReader.readFile(fullFileName(commonTask.getFileInfo()));
             currentSolver.setTask(currentProblem);
             currentSolver.runSolver();
-            while(currentSolver.getSolutionStatus() == 0);
-            if (currentSolver.getSolutionStatus() != 1) {
+                while(currentSolver.getSolutionStatus() == 0);
+            if (currentSolver.getSolutionStatus() > 3) {
                 log.write("Unknown error while solving!");
             }
             else {
@@ -68,8 +68,10 @@ public class SolutionHandlerModel {
             currentProblem = currentReader.readFile(fullFileName(commonTask.getFileInfo()));
             currentSolver.setTask(currentProblem);
             currentSolver.runSolver();
-            while(currentSolver.getSolutionStatus() == 0);
-            if (currentSolver.getSolutionStatus() != 1) {
+            int solutionStatus = currentSolver.getSolutionStatus();
+            while(solutionStatus < 3 && solutionStatus >= 0)
+                solutionStatus = currentSolver.getSolutionStatus();
+            if (solutionStatus != 3) {
                 log.write("Unknown error while solving!");
             }
             else {
@@ -107,7 +109,7 @@ public class SolutionHandlerModel {
     }
     private void setSolver(int solverId){
         switch(solverId) {
-            case SolutionControllerTaskDTO.GREEDY_SOLVER -> {currentSolver = new MockSolver(); solverName = "Greedy";}//GreedySolver();
+            case SolutionControllerTaskDTO.GREEDY_SOLVER -> {currentSolver = new GreedySolver(); solverName = "Greedy";}//GreedySolver();
             case SolutionControllerTaskDTO.CPLEX_SOLVER -> {currentSolver = new MockSolver(); solverName = "CPLEX";}//CPLEXSolver();
             case SolutionControllerTaskDTO.MA_SOLVER -> {currentSolver = new MockSolver(); solverName = "Multi-Agent";}//MASolver();
             default -> currentSolver = new MockSolver();

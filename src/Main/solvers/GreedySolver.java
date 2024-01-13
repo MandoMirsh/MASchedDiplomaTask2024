@@ -10,7 +10,9 @@ public class GreedySolver implements Solver{
     private ProblemModel currentTask;
     private int solutionStatus = SOLUTION_UNSET;
     private LogHandler logPlace;
-    public static final int SOLUTION_SET = 1, SOLUTION_STARTED = 2, SOLUTION_FINISHED = 3, SOLUTION_RUN_ERROR = 4,SOLUTION_UNSET = 0;
+    public static final int SOLUTION_SET = 1, SOLUTION_STARTED = 2, SOLUTION_FINISHED = 3,
+                            SOLUTION_RUN_ERROR = 4,SOLUTION_UNSET = 0;
+
     private static final int TASK_BLOCKED = 3, TASK_READY = 2, TASK_SET = 1;
     private static final int SUPPORTED_SOLUTION_LEN = 500;
     private ArrayList<Integer> taskStatuses, predecessorsToGo, startPlaceSearch;
