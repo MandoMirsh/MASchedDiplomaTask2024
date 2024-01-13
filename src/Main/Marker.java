@@ -25,9 +25,10 @@ public class Marker {
         /*
          * inputName has a presentation as: "jxn_m.res", where
          * j = 'j'
-         * x  equals 30,60,90 or 120 and takes a long way back
+         * x  equals 30,60,90 or 120 and is a problem set
          * n equals problem's decade
          * m is a position of a problem in a decade
+         * . is a '.'
          */
         if (inputName.startsWith("j30")) {
             prefixLen = 3;
@@ -68,10 +69,10 @@ public class Marker {
         Scanner fileScanner;
         int ret = -273;//no bloody reason, except for compiler
         try {
-            fileScanner = new Scanner(answers);
+            fileScanner = new Scanner(answers,"Windows-1252");
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
-        };
+        }
         Scanner lineScanner = new Scanner ("");
         for (int i = 0; i < SKIP_ANSWER_LIST_FIRST; i++) {
             lineScanner = new Scanner(fileScanner.nextLine());
