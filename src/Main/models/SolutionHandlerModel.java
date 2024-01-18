@@ -4,7 +4,9 @@ import Main.DTO.SolutionControllerTaskDTO;
 import Main.Marker;
 import Main.loggers.LogHandler;
 import Main.readers.FileReader;
+import Main.readers.MockReader;
 import Main.readers.RCPFileReader;
+import Main.readers.SMFileReader;
 import Main.solvers.GreedySolver;
 import Main.solvers.MockSolver;
 import Main.solvers.Solver;
@@ -121,8 +123,8 @@ public class SolutionHandlerModel {
             currentReader = new RCPFileReader();
         }
         else {
-           // currentChecker = new SMChechecker();
-           // currentReader = new SMFileReader();
+            currentChecker = new SMFileChecker();
+            currentReader = new SMFileReader();
         }
 
     }
