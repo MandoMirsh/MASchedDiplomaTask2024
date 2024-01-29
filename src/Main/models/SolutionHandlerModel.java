@@ -8,10 +8,11 @@ import Main.readers.MockReader;
 import Main.readers.RCPFileReader;
 import Main.readers.SMFileReader;
 import Main.solvers.GreedySolver;
+import Main.solvers.MASolver;
 import Main.solvers.MockSolver;
 import Main.solvers.Solver;
 import Main.checkers.*;
-public class SolutionHandlerModel {
+public class SolutionHandlerModel implements SolutionHandler {
     private Solver currentSolver;
     private ProblemModel currentProblem;
     private FileChecker currentChecker;
@@ -20,9 +21,11 @@ public class SolutionHandlerModel {
     public static final int SOL_SET_TASK_PLEASE = 0, SOL_READY = 1, SOL_IN_PROGRESS = 2, SOL_CHECKS = 3;
     private LogHandler log, results;
     private String solverName;
+    @Override
     public void setProblem(SolutionControllerTaskDTO task) {
         commonTask = task;
     }
+    @Override
     public void startSolving() {
 
         currentChecker.setFile(fullFileName(commonTask.getFileInfo()));
@@ -54,11 +57,13 @@ public class SolutionHandlerModel {
         }
 
     }
+    @Override
     public void makeReady() {
         setSolver(commonTask.getSolverType());
         setCheckerReader(commonTask.getFileInfo().getExtension());
         currentSolver.setLogger(log);
     }
+    @Override
     public void runNext(){
         nextTask();
         currentChecker.setFile(fullFileName(commonTask.getFileInfo()));
@@ -105,6 +110,7 @@ public class SolutionHandlerModel {
     }
 
 
+    @Override
     public void setLog (LogHandler logPlace, LogHandler resultPlace) {
             log = logPlace;
             results = resultPlace;
@@ -113,7 +119,7 @@ public class SolutionHandlerModel {
         switch(solverId) {
             case SolutionControllerTaskDTO.GREEDY_SOLVER -> {currentSolver = new GreedySolver(); solverName = "Greedy";}//GreedySolver();
             case SolutionControllerTaskDTO.CPLEX_SOLVER -> {currentSolver = new MockSolver(); solverName = "CPLEX";}//CPLEXSolver();
-            case SolutionControllerTaskDTO.MA_SOLVER -> {currentSolver = new MockSolver(); solverName = "Multi-Agent";}//MASolver();
+            case SolutionControllerTaskDTO.MA_SOLVER -> {currentSolver = new MASolver(); solverName = "Multi-Agent";}//MASolver();
             default -> currentSolver = new MockSolver();
         }
     }

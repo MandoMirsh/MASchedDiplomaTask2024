@@ -4,6 +4,7 @@ import Main.DTO.InputFileDTO;
 import Main.DTO.SolutionControllerTaskDTO;
 import Main.loggers.TableLogger;
 import Main.loggers.TextPaneLogger;
+import Main.models.SolutionHandler;
 import Main.models.SolutionHandlerModel;
 //import Test.DebugInfoShower;
 //import Test.ShowAThingDialog;
@@ -16,6 +17,7 @@ import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Enumeration;
 
 import static javax.swing.SwingUtilities.getRoot;
 
@@ -35,6 +37,7 @@ public class MainHandler {
     private JTextField fileChooseTextField;
     private JCheckBox needExtraFilesCheckBox;
     private JSpinner spinnerHowManyFiles;
+    private ButtonGroup solverChooseBtnGroup;
     private JPanel panel2 = new JPanel();
     private JFileChooser fileChooser = new JFileChooser("C:\\Users\\seriu0007\\IdeaProjects\\MirshCMCDiploma2023-2024\\src\\Docs\\InputFiles");
 
@@ -54,7 +57,7 @@ public class MainHandler {
     String[][] data = {};
     DefaultTableModel tableModel = new DefaultTableModel(data,columnNames);
     JScrollPane scrollPane_1;
-    private SolutionHandlerModel solutionHandler = new SolutionHandlerModel();
+    private SolutionHandler solutionHandler = new SolutionHandlerModel();
     private TableLogger tableLogger = new TableLogger();
     private TextPaneLogger paneLogger = new TextPaneLogger();
     private int extraRuns = 0;
@@ -182,9 +185,27 @@ public class MainHandler {
             ret.setHowManyToProceed(1);
         }
         extraRuns = ret.getHowManyToProceed() - 1;
-        //TODO: set solver according to selected radiobutton in solverChooseButtonGroup
-        ret.setSolver(SolutionControllerTaskDTO.GREEDY_SOLVER);
+
+        ret.setSolver(getSolverId(getSelectedButtonText(solverChooseBtnGroup)));
         return ret;
+    }
+    private String getSelectedButtonText(ButtonGroup buttonGroup) {
+        for (Enumeration<AbstractButton> buttons = buttonGroup.getElements(); buttons.hasMoreElements();) {
+            AbstractButton button = buttons.nextElement();
+            if (button.isSelected()) {
+                return button.getText();
+            }
+        }
+
+        return null;
+    }
+    private int getSolverId( String buttonName) {
+        if (buttonName.equals("Greedy Solver")){
+            return SolutionControllerTaskDTO.GREEDY_SOLVER;
+        }
+        else{
+            return SolutionControllerTaskDTO.MA_SOLVER;
+        }
     }
 
     public JPanel getContentPane() {
