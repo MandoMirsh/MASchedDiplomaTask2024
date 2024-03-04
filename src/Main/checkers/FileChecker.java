@@ -1,6 +1,6 @@
 package Main.checkers;
 
-import Main.DTO.InputFileDTO;
+import Main.DataObjects.InputFileDTO;
 
 public interface FileChecker {
     void setFile(String filename);

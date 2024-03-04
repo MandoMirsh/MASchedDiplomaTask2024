@@ -1,10 +1,9 @@
 package Main.models;
-import Main.DTO.InputFileDTO;
-import Main.DTO.SolutionControllerTaskDTO;
+import Main.DataObjects.InputFileDTO;
+import Main.DataObjects.SolutionControllerTaskDO;
 import Main.Marker;
 import Main.loggers.LogHandler;
 import Main.readers.FileReader;
-import Main.readers.MockReader;
 import Main.readers.RCPFileReader;
 import Main.readers.SMFileReader;
 import Main.solvers.GreedySolver;
@@ -17,14 +16,16 @@ public class SolutionHandlerModel implements SolutionHandler {
     private ProblemModel currentProblem;
     private FileChecker currentChecker;
     private FileReader currentReader;
-    private SolutionControllerTaskDTO commonTask;
+    private SolutionControllerTaskDO commonTask;
     public static final int SOL_SET_TASK_PLEASE = 0, SOL_READY = 1, SOL_IN_PROGRESS = 2, SOL_CHECKS = 3;
     private LogHandler log, results;
     private String solverName;
     @Override
-    public void setProblem(SolutionControllerTaskDTO task) {
+    public void setProblem(SolutionControllerTaskDO task) {
         commonTask = task;
     }
+
+
     @Override
     public void startSolving() {
 
@@ -96,6 +97,12 @@ public class SolutionHandlerModel implements SolutionHandler {
 
         }
     }
+
+    @Override
+    public void finish() {
+
+    }
+
     private void nextTask(){
         if (commonTask.getFileInfo().getPosition() == 10) {
             commonTask.getFileInfo().setPosition(1);
@@ -117,9 +124,9 @@ public class SolutionHandlerModel implements SolutionHandler {
     }
     private void setSolver(int solverId){
         switch(solverId) {
-            case SolutionControllerTaskDTO.GREEDY_SOLVER -> {currentSolver = new GreedySolver(); solverName = "Greedy";}//GreedySolver();
-            case SolutionControllerTaskDTO.CPLEX_SOLVER -> {currentSolver = new MockSolver(); solverName = "CPLEX";}//CPLEXSolver();
-            case SolutionControllerTaskDTO.MA_SOLVER -> {currentSolver = new MASolver(); solverName = "Multi-Agent";}//MASolver();
+            case SolutionControllerTaskDO.GREEDY_SOLVER -> {currentSolver = new GreedySolver(); solverName = "Greedy";}//GreedySolver();
+            case SolutionControllerTaskDO.CPLEX_SOLVER -> {currentSolver = new MockSolver(); solverName = "CPLEX";}//CPLEXSolver();
+            case SolutionControllerTaskDO.MA_SOLVER -> {currentSolver = new MASolver(); solverName = "Multi-Agent";}//MASolver();
             default -> currentSolver = new MockSolver();
         }
     }

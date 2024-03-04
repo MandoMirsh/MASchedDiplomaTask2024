@@ -1,4 +1,4 @@
-package Main.DTO;
+package Main.DataObjects;
 
 public class InputFileDTO {
     private int problemClass, decNum, position;

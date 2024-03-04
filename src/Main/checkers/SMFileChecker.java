@@ -1,6 +1,6 @@
 package Main.checkers;
 
-import Main.DTO.InputFileDTO;
+import Main.DataObjects.InputFileDTO;
 
 import java.io.File;
 import java.io.IOException;

@@ -1,7 +1,8 @@
-package Main.DTO;
+package Main.DataObjects;
 
 public class SolutionMarkedDTO {
     private int problemClass, decNum, position, answer, knownBestAnswer,mark;
+    private String solver;
     public int getProblemClass() {
         return problemClass;
     }
@@ -48,6 +49,13 @@ public class SolutionMarkedDTO {
 
     public void setMark(int mark) {
         this.mark = mark;
+    }
+
+    public void setSolver(String name) {
+        solver = name;
+    }
+    public String getSolver() {
+        return solver;
     }
 
 

@@ -20,10 +20,21 @@ public class ProblemModel {
     public ArrayList<Integer> getResources() {
         return new ArrayList<Integer>(rNum);
     }
+    public void setResources(ArrayList<Integer> resources) {
+        rNum= new ArrayList<Integer>();
+        rNum.addAll(resources);
+    }
     public void addTask(TaskModel task, int taskId) {
         tasks.add(taskId, task);
     }
     public ArrayList<TaskModel> getTasks() {
         return new ArrayList<TaskModel>(tasks);
+    }
+
+    /**
+     * ONLY FOR JACKSON COMPATIBILITY
+     * @param rnum
+     */
+    public void setRnum(int rnum){
     }
 }

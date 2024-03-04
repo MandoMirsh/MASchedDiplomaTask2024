@@ -1,7 +1,7 @@
 package Main;
 
-import Main.DTO.InputFileDTO;
-import Main.DTO.SolutionControllerTaskDTO;
+import Main.DataObjects.InputFileDTO;
+import Main.DataObjects.SolutionControllerTaskDO;
 import Main.loggers.TableLogger;
 import Main.loggers.TextPaneLogger;
 import Main.models.SolutionHandler;
@@ -11,9 +11,7 @@ import Main.models.SolutionHandlerModel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -104,7 +102,7 @@ public class MainHandler {
                                                 "File not chosen",JOptionPane.WARNING_MESSAGE);
                 }
                 else {
-                    SolutionControllerTaskDTO mainTask = getMainTask();
+                    SolutionControllerTaskDO mainTask = getMainTask();
                     paneLogger.setWriteInto(textPane);
                     tableLogger.setWriteInto(tableModel);
                     tableLogger.setSeparator(",");
@@ -149,7 +147,7 @@ public class MainHandler {
         String path = filePath.substring(0, divisor + 1);
         String fileName = filePath.substring(divisor + 1);
         String ext;
-        int problemSet, prefixLen = 3, palceParamsLen = 3, pos, subPos;
+        int problemSet, prefixLen = 3, placeParamsLen = 3, pos, subPos;
         int firstSeparator = fileName.indexOf('_'), secondSeparator = fileName.indexOf('.');
 
         problemSet = Integer.parseInt("" + fileName.charAt(1));
@@ -170,8 +168,8 @@ public class MainHandler {
         return ret;
     }
 
-    private SolutionControllerTaskDTO getMainTask () {
-        SolutionControllerTaskDTO ret = new SolutionControllerTaskDTO();
+    private SolutionControllerTaskDO getMainTask () {
+        SolutionControllerTaskDO ret = new SolutionControllerTaskDO();
         ret.setFileInfo(getFileDTO(fileChooseTextField.getText()));
         if (needExtraFilesCheckBox.isSelected())
         {
@@ -201,14 +199,18 @@ public class MainHandler {
     }
     private int getSolverId( String buttonName) {
         if (buttonName.equals("Greedy Solver")){
-            return SolutionControllerTaskDTO.GREEDY_SOLVER;
+            return SolutionControllerTaskDO.GREEDY_SOLVER;
         }
         else{
-            return SolutionControllerTaskDTO.MA_SOLVER;
+            return SolutionControllerTaskDO.MA_SOLVER;
         }
     }
 
     public JPanel getContentPane() {
         return panel1;
+    }
+
+    private void createUIComponents() {
+        // TODO: place custom component creation code here
     }
 }

@@ -1,9 +1,11 @@
-package Main.DTO;
+package Main.DataObjects;
 
-import Main.loggers.LogHandler;
-
-public class SolutionControllerTaskDTO {
+public class SolutionControllerTaskDO {
     public static final int MA_SOLVER = 2,GREEDY_SOLVER = 1, CPLEX_SOLVER = 3;
+    private InputFileDTO fileInfo;
+    private int howManyToProceed;
+    private int whichSolverToUSe;
+
     public InputFileDTO getFileInfo() {
         return fileInfo;
     }
@@ -23,8 +25,5 @@ public class SolutionControllerTaskDTO {
         whichSolverToUSe = solverId;
     }
     public int getSolverType() { return whichSolverToUSe;}
-    private InputFileDTO fileInfo;
-    private int howManyToProceed;
-    private int whichSolverToUSe;
 
 }
