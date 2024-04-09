@@ -28,10 +28,10 @@ public class JobAgent extends Agent {
 
     private final int STARTUP_TEST = 1, TESTS_ENABLED = 1, TESTS_DISABLED = 0,
             TEST_FIND_FOLLOWERS = 2, TEST_FOLLOWERS_INFORM = 3, TEST_GET_ANY_INFORMATION_FROM_PREDECESSORS = 4,
-            TEST_WAIT_FOR_FOLLOWERS = 5, TEST_MESSAGES_THROUGHPUT = 6, TEST_CONTRACT_BASE_MAKING = 7,
+            TEST_WAIT_FOR_FOLLOWERS = 5, TEST_CONTRACT_BASE_MAKING = 6,TEST_SEND_CONTRACT = 7,
             TEST_MAKE_UNCONSTRAINED_SOLUTION = 8;
-    int testMode = TESTS_ENABLED, testProgram = TEST_MAKE_UNCONSTRAINED_SOLUTION;
-    RCPContract myContract = new RCPContract();
+    int testMode = TESTS_ENABLED, testProgram = TEST_SEND_CONTRACT;
+    String myContractBase;
     MessageTemplate sentByResource;
     MessageTemplate resourceAccept, resourceDecline;
     @Override
@@ -258,8 +258,9 @@ public class JobAgent extends Agent {
                 myAgent.addBehaviour(sendMyFinish);
             }
             else{
+                myContractBase = makeContractBase();
                 if (testMode == TESTS_ENABLED) {
-                    System.out.println(makeContractBase());
+                    System.out.println(myContractBase);
                 }
                 if ((testMode == TESTS_ENABLED) && (testProgram == TEST_CONTRACT_BASE_MAKING)) {
                     myAgent.addBehaviour(sayTestsFinished);
@@ -272,17 +273,34 @@ public class JobAgent extends Agent {
     };
 
     private String makeContractBase(){
-        StringBuilder ret = new StringBuilder();
-        ret.append(jobNumber).append(",").append(currentPredecessorsFinish + 1).append(",").append(timeNeed).append(",");
-        return ret.toString();
+        return jobNumber + "," + (currentPredecessorsFinish + 1) + "," + timeNeed + ",";
     }
 
     Behaviour sendContracts = new CyclicBehaviour() {
         @Override
         public void action() {
+            if (resourcePointer == resVolumes.size()){
+                if (testMode == TESTS_ENABLED) {
+                    System.out.println("Job #" + jobNumber + ": ");
+                }
+            }
+            sendNextContract();
+            if ((testMode == TESTS_ENABLED) && (testProgram == TEST_SEND_CONTRACT)){
+                myAgent.addBehaviour(sayTestsFinished);
+                myAgent.removeBehaviour(sendContracts);
+            }
 
         }
     };
+    private void sendNextContract(){
+        sendContract(resVolumes.get(resourcePointer),resAddresses.get(resourcePointer++));
+    }
+    private void sendContract(int resNeeded, AID contacts){
+        ACLMessage msg = new ACLMessage(ACLMessage.PROPOSE);
+        msg.setContent(myContractBase + resNeeded);
+        send(msg);
+    }
+
 
     Behaviour waitForResponses = new CyclicBehaviour() {
         @Override
@@ -300,6 +318,7 @@ public class JobAgent extends Agent {
                                 + ". Restarting contract sending procedure.");
                     }
                     currentStartConstraint = startCorrection;
+
                     myAgent.addBehaviour(makeNewContractBase);
                     myAgent.removeBehaviour(waitForResponses);
                 }
@@ -315,14 +334,18 @@ public class JobAgent extends Agent {
     };
     int tryToFindReject(){
         int ret = -1;
-
-
+        ACLMessage msg = receive(resourceDecline);
+        if (msg != null) {
+            ret = Integer.parseInt(msg.getContent());
+        }
         return ret;
     }
     boolean foundApprove(){
         boolean ret = false;
-
-
+        ACLMessage msg = receive(resourceAccept);
+        if (msg!= null) {
+            ret = true;
+        }
         return ret;
     }
     //MessageTemplate  fromResource(){
