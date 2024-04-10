@@ -1,6 +1,5 @@
 package Main.Agents;
 
-import Main.DataObjects.RCPContract;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.*;
@@ -29,8 +28,9 @@ public class JobAgent extends Agent {
     private final int STARTUP_TEST = 1, TESTS_ENABLED = 1, TESTS_DISABLED = 0,
             TEST_FIND_FOLLOWERS = 2, TEST_FOLLOWERS_INFORM = 3, TEST_WAIT_FOR_FOLLOWERS = 4,
             TEST_CONTRACT_BASE_MAKING = 5,TEST_SEND_CONTRACT = 6, TEST_SEND_ALL_CONTRACTS = 7,
-            TEST_MAKE_UNCONSTRAINED_SOLUTION = 8;
-    int testMode = TESTS_ENABLED, testProgram = TEST_SEND_ALL_CONTRACTS;
+            TEST_GET_FIRST_RESPONSE = 8,
+            TEST_MAKE_UNCONSTRAINED_SOLUTION = 9;
+    int testMode = TESTS_ENABLED, testProgram = TEST_GET_FIRST_RESPONSE;
     String myContractBase;
     MessageTemplate sentByResource;
     MessageTemplate resourceAccept, resourceDecline;
@@ -246,6 +246,7 @@ public class JobAgent extends Agent {
             else{
                 myAgent.addBehaviour(makeNewContractBase);
             }
+            currentStartConstraint = currentPredecessorsFinish;
             myAgent.removeBehaviour(waitForPredecessors);
 
         }
@@ -273,7 +274,7 @@ public class JobAgent extends Agent {
     };
 
     private String makeContractBase(){
-        return jobNumber + "," + (currentPredecessorsFinish + 1) + "," + timeNeed + ",";
+        return jobNumber + "," + (currentStartConstraint + 1) + "," + timeNeed + ",";
     }
 
     Behaviour sendContracts = new CyclicBehaviour() {
@@ -325,17 +326,22 @@ public class JobAgent extends Agent {
                 myAgent.addBehaviour(sendMyFinish);
                 myAgent.removeBehaviour(waitForResponses);
             }
-            else{
+            else {
                 int startCorrection = tryToFindReject();
                 if (startCorrection > currentStartConstraint){
                     if (testMode == TESTS_ENABLED){
-                        System.out.println("Job #" + jobNumber + " got contract reject."
-                                + " Contract start is to be after t = " + startCorrection
-                                + ". Restarting contract sending procedure.");
+                    System.out.println("Job #" + jobNumber + " got contract reject."
+                            + " Contract start is to be after t = " + startCorrection
+                            + ". Restarting contract sending procedure.");
                     }
-                    currentStartConstraint = startCorrection;
+                    if ((testMode == TESTS_ENABLED) && (testProgram == TEST_GET_FIRST_RESPONSE)){
+                        myAgent.addBehaviour(sayTestsFinished);
+                    }
+                    else{
+                        currentStartConstraint = startCorrection;
+                        myAgent.addBehaviour(makeNewContractBase);
 
-                    myAgent.addBehaviour(makeNewContractBase);
+                    }
                     myAgent.removeBehaviour(waitForResponses);
                 }
                 if(foundApprove()){
@@ -343,9 +349,12 @@ public class JobAgent extends Agent {
                     if (testMode == TESTS_ENABLED){
                         System.out.println("got contract approval. Total approval count: " + approvalCount);
                     }
+                    if ((testMode == TESTS_ENABLED) && (testProgram == TEST_GET_FIRST_RESPONSE)){
+                        myAgent.addBehaviour(sayTestsFinished);
+                        myAgent.removeBehaviour(waitForResponses);
+                    }
                 }
             }
-
         }
     };
     int tryToFindReject(){

@@ -29,8 +29,9 @@ public class ResourceAgent extends Agent {
     final static int TESTS_ENABLED = 1, TESTS_DISABLED = 0;
     final static int  NO_PROGRAM = 0,JUST_TELL_PARAMS = 1, FIND_OTHER_RESOURCES = 2,
                         GET_FIRST_CONTRACT = 3, GET_ALL_CONTRACTS = 4,
-            CHECK_SATISFACTION_COMPUTATION = 5, ALWAYS_SEND_ACCEPT = 6;
-    int testMode = TESTS_ENABLED, testProgram = GET_ALL_CONTRACTS;
+            CHECK_SATISFACTION_COMPUTATION = 5, ALWAYS_SEND_ACCEPT = 6,
+            ALWAYS_SEND_REJECT = 7;
+    int testMode = TESTS_ENABLED, testProgram = ALWAYS_SEND_REJECT;
     ArrayList<AID> resources = new ArrayList<>();
     int timer, tickPeriod = 1000;
     int resName, resVolume, resTypeCount;
@@ -126,9 +127,16 @@ public class ResourceAgent extends Agent {
                     }
                 }
                 else {
-                    if ((testMode == TESTS_ENABLED) && (testProgram == ALWAYS_SEND_ACCEPT)){
-                        System.out.println("Res #" + resName + ": accepted contract according to the test scenario.");
-                        sendAccept(newContractDetails.getContacts());
+                    if ((testMode == TESTS_ENABLED) && ((testProgram == ALWAYS_SEND_ACCEPT)||(testProgram == ALWAYS_SEND_REJECT))){
+
+                        if (testProgram == ALWAYS_SEND_ACCEPT){
+                            System.out.println("Res #" + resName + ": accepted contract according to the test scenario.");
+                            sendAccept(newContractDetails.getContacts());
+                        }
+                        else{
+                            System.out.println("Res #" + resName + ": rejected contract according to the test scenario.");
+                            sendReject(newContractDetails.getContract().getStart(),newContractDetails.getContacts());
+                        }
                     }
                     else {
                         if (contractIsPossible(newContractDetails.getContract())){
@@ -145,10 +153,11 @@ public class ResourceAgent extends Agent {
                             }
 
                         }
+                        myAgent.addBehaviour(timer1);
+                        myAgent.addBehaviour(waitForAdditionalContracts);
+                        myAgent.removeBehaviour(waitForFirstContract);
                     }
-                    myAgent.addBehaviour(timer1);
-                    myAgent.addBehaviour(waitForAdditionalContracts);
-                    myAgent.removeBehaviour(waitForFirstContract);
+
                 }
             }
         }
@@ -158,7 +167,7 @@ public class ResourceAgent extends Agent {
         @Override
         public void action() {
              MASolverContractDetails newContractDetails = checknewContract();
-            if (newContractDetails != null) {
+            if (newContractDetails.getContract() != null) {
                 if (testMode == TESTS_ENABLED) {
                     System.out.println("Res #" + resName + ": got new contract from job #"
                             + newContractDetails.getContract().getJobName());
@@ -202,7 +211,7 @@ public class ResourceAgent extends Agent {
     }
     boolean contractIsPossible(RCPContract contract) {
         boolean ret = true;
-
+        if (unsharedResources.isEmpty()) return ret;
         int contractStart = contract.getStart();
         //int contractFinish = contractStart + contract.getLongevity() - 1;
         int scheduleFinish = unsharedResources.size();
