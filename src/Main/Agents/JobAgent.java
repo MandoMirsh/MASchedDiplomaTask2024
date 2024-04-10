@@ -27,10 +27,10 @@ public class JobAgent extends Agent {
         predecessorsNonActive = 0, predecessorsTotal = 0;
 
     private final int STARTUP_TEST = 1, TESTS_ENABLED = 1, TESTS_DISABLED = 0,
-            TEST_FIND_FOLLOWERS = 2, TEST_FOLLOWERS_INFORM = 3, TEST_GET_ANY_INFORMATION_FROM_PREDECESSORS = 4,
-            TEST_WAIT_FOR_FOLLOWERS = 5, TEST_CONTRACT_BASE_MAKING = 6,TEST_SEND_CONTRACT = 7,
+            TEST_FIND_FOLLOWERS = 2, TEST_FOLLOWERS_INFORM = 3, TEST_WAIT_FOR_FOLLOWERS = 4,
+            TEST_CONTRACT_BASE_MAKING = 5,TEST_SEND_CONTRACT = 6, TEST_SEND_ALL_CONTRACTS = 7,
             TEST_MAKE_UNCONSTRAINED_SOLUTION = 8;
-    int testMode = TESTS_ENABLED, testProgram = TEST_SEND_CONTRACT;
+    int testMode = TESTS_ENABLED, testProgram = TEST_SEND_ALL_CONTRACTS;
     String myContractBase;
     MessageTemplate sentByResource;
     MessageTemplate resourceAccept, resourceDecline;
@@ -281,15 +281,27 @@ public class JobAgent extends Agent {
         public void action() {
             if (resourcePointer == resVolumes.size()){
                 if (testMode == TESTS_ENABLED) {
-                    System.out.println("Job #" + jobNumber + ": ");
+                    System.out.println("Job #" + jobNumber + ":sent all current contracts.");
                 }
-            }
-            sendNextContract();
-            if ((testMode == TESTS_ENABLED) && (testProgram == TEST_SEND_CONTRACT)){
-                myAgent.addBehaviour(sayTestsFinished);
+                if ((testMode == TESTS_ENABLED) && (testProgram == TEST_SEND_ALL_CONTRACTS)){
+                    myAgent.addBehaviour(sayTestsFinished);
+                }
+                else{
+                    myAgent.addBehaviour(waitForResponses);
+                }
                 myAgent.removeBehaviour(sendContracts);
             }
-
+            else {
+                if (testMode == TESTS_ENABLED) {
+                    System.out.println("Job #" + jobNumber + ": send contract to the Resource #"
+                            + (resourcePointer + 1));
+                }
+                sendNextContract();
+                if ((testMode == TESTS_ENABLED) && (testProgram == TEST_SEND_CONTRACT)){
+                    myAgent.addBehaviour(sayTestsFinished);
+                    myAgent.removeBehaviour(sendContracts);
+                }
+            }
         }
     };
     private void sendNextContract(){
@@ -298,6 +310,7 @@ public class JobAgent extends Agent {
     private void sendContract(int resNeeded, AID contacts){
         ACLMessage msg = new ACLMessage(ACLMessage.PROPOSE);
         msg.setContent(myContractBase + resNeeded);
+        msg.addReceiver(contacts);
         send(msg);
     }
 
@@ -306,6 +319,9 @@ public class JobAgent extends Agent {
         @Override
         public void action() {
             if (approvalCount == resVolumes.size()){
+                if (testMode == TESTS_ENABLED) {
+                    System.out.println("Job #" + jobNumber + ": got all accepts needed. Now starting to send ");
+                }
                 myAgent.addBehaviour(sendMyFinish);
                 myAgent.removeBehaviour(waitForResponses);
             }

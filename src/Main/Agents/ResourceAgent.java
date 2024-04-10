@@ -30,7 +30,7 @@ public class ResourceAgent extends Agent {
     final static int  NO_PROGRAM = 0,JUST_TELL_PARAMS = 1, FIND_OTHER_RESOURCES = 2,
                         GET_FIRST_CONTRACT = 3, GET_ALL_CONTRACTS = 4,
             CHECK_SATISFACTION_COMPUTATION = 5, ALWAYS_SEND_ACCEPT = 6;
-    int testMode = TESTS_ENABLED, testProgram = GET_FIRST_CONTRACT;
+    int testMode = TESTS_ENABLED, testProgram = GET_ALL_CONTRACTS;
     ArrayList<AID> resources = new ArrayList<>();
     int timer, tickPeriod = 1000;
     int resName, resVolume, resTypeCount;
@@ -112,35 +112,44 @@ public class ResourceAgent extends Agent {
         @Override
         protected void onTick() {
             MASolverContractDetails newContractDetails = checknewContract();
-            if (newContractDetails != null) {
+            if (newContractDetails.getContract() != null) {
                 if (testMode == TESTS_ENABLED) {
                     System.out.println("Res #" + resName + ": got new contract from job #"
                             + newContractDetails.getContract().getJobName());
                 }
-                if ((testMode == TESTS_ENABLED) && (testProgram == GET_FIRST_CONTRACT)){
-                    myAgent.addBehaviour(sayTestsFinished);
-                    myAgent.removeBehaviour(waitForFirstContract);
+                if ((testMode == TESTS_ENABLED) && ((testProgram == GET_FIRST_CONTRACT) || (testProgram == GET_ALL_CONTRACTS))){
+                    System.out.println("Res #" + resName + ": contract details are: "
+                            + newContractDetails.getContract().toString());
+                    if (testProgram == GET_FIRST_CONTRACT){
+                        myAgent.addBehaviour(sayTestsFinished);
+                        myAgent.removeBehaviour(waitForFirstContract);
+                    }
                 }
-                else{
-                    if (contractIsPossible(newContractDetails.getContract())){
-                        if (testMode == TESTS_ENABLED) {
-                            System.out.println("Res #" + resName + ": contract #"
-                                    + newContractDetails.getContract().getJobName() + " is possible right now");
-                        }
-                        contractDetails.add(newContractDetails);
+                else {
+                    if ((testMode == TESTS_ENABLED) && (testProgram == ALWAYS_SEND_ACCEPT)){
+                        System.out.println("Res #" + resName + ": accepted contract according to the test scenario.");
+                        sendAccept(newContractDetails.getContacts());
                     }
                     else {
-                        if (testMode == TESTS_ENABLED) {
-                            System.out.println("Res #" + resName + ": contract #"
-                                    + newContractDetails.getContract().getJobName() + " is not possible right now");
+                        if (contractIsPossible(newContractDetails.getContract())){
+                            if (testMode == TESTS_ENABLED) {
+                                System.out.println("Res #" + resName + ": contract #"
+                                        + newContractDetails.getContract().getJobName() + " is possible right now");
+                            }
+                            contractDetails.add(newContractDetails);
                         }
+                        else {
+                            if (testMode == TESTS_ENABLED) {
+                                System.out.println("Res #" + resName + ": contract #"
+                                        + newContractDetails.getContract().getJobName() + " is not possible right now");
+                            }
 
+                        }
                     }
+                    myAgent.addBehaviour(timer1);
+                    myAgent.addBehaviour(waitForAdditionalContracts);
+                    myAgent.removeBehaviour(waitForFirstContract);
                 }
-
-                myAgent.addBehaviour(timer1);
-                myAgent.addBehaviour(waitForAdditionalContracts);
-                myAgent.removeBehaviour(waitForFirstContract);
             }
         }
     };
@@ -174,7 +183,6 @@ public class ResourceAgent extends Agent {
         ret.setContract(null);
         ret.setContacts(null);
         ACLMessage mes = receive(proposal);
-
         if (mes != null) {
             ret.setContract(getContractFromString(mes.getContent()));
             ret.setContacts(mes.getSender());
@@ -185,7 +193,11 @@ public class ResourceAgent extends Agent {
 
     RCPContract getContractFromString(String contractString) {
         RCPContract ret = new RCPContract();
-
+        String [] s2 = contractString.split(",");
+        ret.setJobName(s2[0]);
+        ret.setStart(Integer.parseInt(s2[1]));
+        ret.setLongevity(Integer.parseInt(s2[2]));
+        ret.setResNeed(Integer.parseInt(s2[3]));
         return ret;
     }
     boolean contractIsPossible(RCPContract contract) {
