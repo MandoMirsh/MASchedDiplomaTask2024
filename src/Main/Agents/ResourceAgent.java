@@ -12,12 +12,8 @@ import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
-import javax.swing.*;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
-
-import static java.util.Comparator.*;
 
 public class ResourceAgent extends Agent {
     private
@@ -31,8 +27,8 @@ public class ResourceAgent extends Agent {
                         GET_FIRST_CONTRACT = 3, GET_ALL_CONTRACTS = 4,
              ALWAYS_SEND_ACCEPT = 5, ALWAYS_SEND_REJECT = 6,
             TEST_CONTRACT_LIST_FORMATION = 7,
-            CHECK_SATISFACTION_COMPUTATION = 8;
-    int testMode = TESTS_ENABLED, testProgram = CHECK_SATISFACTION_COMPUTATION;
+            CHECK_SATISFACTION_COMPUTATION = 8, CHECK_VOTE_SEND_RECEIVE = 9;
+    int testMode = TESTS_ENABLED, testProgram = CHECK_VOTE_SEND_RECEIVE;
     ArrayList<AID> resources = new ArrayList<>();
     int timer, tickPeriod = 1000;
     int resName, resVolume, resTypeCount;
@@ -40,6 +36,10 @@ public class ResourceAgent extends Agent {
     ArrayList<Integer> unsharedResources = new ArrayList<>();
     private final int RES_TYPE_COUNT = 4;
     MessageTemplate proposal = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);
+    MessageTemplate resInform;
+    int resourceMessagePointer;
+    ArrayList<Integer> votes = new ArrayList<>();
+    String messageToResources = "";
     @Override
     public void setup() {
         getStartingParams();
@@ -48,6 +48,7 @@ public class ResourceAgent extends Agent {
             System.out.println(this.getName() + ": resource #" + resName + "; res Volume: " + resVolume + "; resources total: "+ resTypeCount);
         }
         if ((testMode != TESTS_ENABLED) || (testProgram != JUST_TELL_PARAMS)) {
+            resInform = MessageTemplate.MatchSender(getAID());
             this.addBehaviour(findResources);
         }
     }
@@ -82,8 +83,10 @@ public class ResourceAgent extends Agent {
                 DFAgentDescription[] result = DFService.search (myAgent, template);
                 if (result.length == RES_TYPE_COUNT) {
                     for (DFAgentDescription x:result) {
+                        resInform = MessageTemplate.or(resInform,MessageTemplate.MatchSender(x.getName()));
                         resources.add(x.getName());
                     }
+                    resInform = MessageTemplate.and(resInform, MessageTemplate.MatchPerformative(ACLMessage.INFORM));
                     Collections.sort(resources);
                     if(testMode == TESTS_ENABLED) {
                         System.out.println("resource #" + resName + ": found all other resources. ResourceLIst is:"
@@ -228,8 +231,6 @@ public class ResourceAgent extends Agent {
         return ret;
     }
 
-
-
     void sendReject(int lastNotMatching, AID receiver){
         ACLMessage msg = new ACLMessage(ACLMessage.REJECT_PROPOSAL);
         msg.setContent(((Integer)lastNotMatching).toString());
@@ -320,16 +321,69 @@ public class ResourceAgent extends Agent {
     Behaviour voteStart = new OneShotBehaviour() {
         @Override
         public void action() {
-
+            String myVote = contractDetails.get(bestContractPointer).getContract().getJobName();
+            sendToResources(myVote);
+            recieveVotesFromResources();
         }
     };
-    Behaviour sendMyPreference = new CyclicBehaviour() {
+    void sendToResources(String message){
+        messageToResources = message;
+        resourceMessagePointer = 0;
+        addBehaviour(sendToAllResources);
+    }
+    Behaviour sendToAllResources = new CyclicBehaviour() {
         @Override
         public void action() {
-
+            if (resourceMessagePointer == resources.size()) {
+                myAgent.removeBehaviour(sendToAllResources);
+            }
+            else {
+                sendInform(resources.get(resourceMessagePointer++),messageToResources);
+            }
         }
     };
+    void sendInform(AID sendTo, String message) {
+        ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+        msg.setContent(message);
+        msg.addReceiver(sendTo);
+        send(msg);
+    }
+    void recieveVotesFromResources(){
+        votes.clear();
+        addBehaviour(getResourceVotes);
+    }
+    Behaviour getResourceVotes = new CyclicBehaviour() {
+        @Override
+        public void action() {
+            if (votes.size() == resources.size()) {
+                myAgent.addBehaviour(decideFirstRound);
+                myAgent.removeBehaviour(getResourceVotes);
+            }
+            else{
+                String anotherMessage = receiveResourceOpinion();
+                if (!anotherMessage.isEmpty()){
+                    votes.add(Integer.parseInt(anotherMessage));
+                }
+            }
+        }
+    };
+    String receiveResourceOpinion(){
+        StringBuilder ret = new StringBuilder();
+        ACLMessage mes = receive(resInform);
+        if (mes != null) {
+            ret.append(mes.getContent());
+        }
+        return ret.toString();
+    }
 
+    Behaviour decideFirstRound =  new OneShotBehaviour(){
+        @Override
+        public void action(){
+            if ((testMode == TESTS_ENABLED) && (testProgram == CHECK_VOTE_SEND_RECEIVE)){
+                System.out.println("Res #" + resName + ": got these vote results: " + votes);
+            }
+        }
+    };
     void applyContract (RCPContract contract) {
         int contractStart = contract.getStart();
         int contractLongevity = contract.getLongevity();
