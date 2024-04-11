@@ -27,11 +27,12 @@ public class ResourceAgent extends Agent {
     int bestContractPointer = -1, bestContractValue = -4000;
     int contractPointer = 0;
     final static int TESTS_ENABLED = 1, TESTS_DISABLED = 0;
-    final static int  NO_PROGRAM = 0,JUST_TELL_PARAMS = 1, FIND_OTHER_RESOURCES = 2,
+    final static int  NO_PROGRAM = 0, JUST_TELL_PARAMS = 1, FIND_OTHER_RESOURCES = 2,
                         GET_FIRST_CONTRACT = 3, GET_ALL_CONTRACTS = 4,
-            CHECK_SATISFACTION_COMPUTATION = 5, ALWAYS_SEND_ACCEPT = 6,
-            ALWAYS_SEND_REJECT = 7;
-    int testMode = TESTS_ENABLED, testProgram = ALWAYS_SEND_REJECT;
+             ALWAYS_SEND_ACCEPT = 5, ALWAYS_SEND_REJECT = 6,
+            TEST_CONTRACT_LIST_FORMATION = 7,
+            CHECK_SATISFACTION_COMPUTATION = 8;
+    int testMode = TESTS_ENABLED, testProgram = CHECK_SATISFACTION_COMPUTATION;
     ArrayList<AID> resources = new ArrayList<>();
     int timer, tickPeriod = 1000;
     int resName, resVolume, resTypeCount;
@@ -182,7 +183,6 @@ public class ResourceAgent extends Agent {
                 else{
                     sendReject(contractConflictPoint,newContractDetails.getContacts());
                 }
-
                 timer++;
             }
         }
@@ -257,6 +257,8 @@ public class ResourceAgent extends Agent {
             if (timer == 0) {
                 myAgent.addBehaviour(markContracts);
                 myAgent.removeBehaviour(waitForAdditionalContracts);
+                contractPointer = 0;
+                bestContractValue = -4000;
                 myAgent.removeBehaviour(timer2);
             }
             else {
@@ -264,21 +266,70 @@ public class ResourceAgent extends Agent {
             }
         }
     };
-    RCPContract getContractFromMessage(String message){
-        RCPContract ret = new RCPContract();
-        String[] s1 = message.split(",");
-        ret.setJobName(s1[0]);
-        ret.setStart(Integer.parseInt(s1[1]));
-        ret.setLongevity(Integer.parseInt(s1[2]));
-        ret.setResNeed(Integer.parseInt(s1[3]));
-        return ret;
-    }
 
     void sendAccept(AID receiver) {
         ACLMessage msg = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
         msg.addReceiver(receiver);
         send(msg);
     }
+
+
+    Behaviour markContracts = new CyclicBehaviour() {
+        @Override
+        public void action() {
+            if (contractPointer == contractDetails.size()) {
+                myAgent.addBehaviour(voteStart);
+                myAgent.removeBehaviour(markContracts);
+            }
+            else{
+                if ((testMode == TESTS_ENABLED) && ((testProgram == TEST_CONTRACT_LIST_FORMATION)
+                        || (testProgram == CHECK_SATISFACTION_COMPUTATION))) {
+                    if (testProgram == TEST_CONTRACT_LIST_FORMATION) {
+                        System.out.println("Res #" + resName + ": contract in list: "
+                                + contractDetails.get(contractPointer).getContract().toString());
+                    }
+                    else {
+                        System.out.println("Res #" + resName + ": contract from "
+                                + contractDetails.get(contractPointer).getContract().getJobName() +" got marked as: "
+                                + contractSatisfaction(contractDetails.get(contractPointer).getContract()));
+                    }
+                }
+                else {
+                    int currentContractCheckedSatisfaction = contractSatisfaction(contractDetails.get(contractPointer).getContract());
+                    if (currentContractCheckedSatisfaction > bestContractValue) {
+                        bestContractPointer = contractPointer;
+                        bestContractValue = currentContractCheckedSatisfaction;
+                    }
+                }
+                contractPointer++;
+            }
+
+        }
+    };
+    int contractSatisfaction(RCPContract contract) {
+        int ret = 0;
+        int contractFinish = contract.getStart() + contract.getLongevity() - 1;
+        int scheduleFinish = unsharedResources.size();
+        if (scheduleFinish < contractFinish) {
+            ret += (scheduleFinish - contractFinish - 1) * resVolume;
+        }
+        ret += contract.getLongevity() * contract.getResNeed();
+        return ret;
+    }
+
+    Behaviour voteStart = new OneShotBehaviour() {
+        @Override
+        public void action() {
+
+        }
+    };
+    Behaviour sendMyPreference = new CyclicBehaviour() {
+        @Override
+        public void action() {
+
+        }
+    };
+
     void applyContract (RCPContract contract) {
         int contractStart = contract.getStart();
         int contractLongevity = contract.getLongevity();
@@ -294,27 +345,4 @@ public class ResourceAgent extends Agent {
             unsharedResources.set(contractStart + i,changeTo);
         }
     }
-
-    Behaviour markContracts = new CyclicBehaviour() {
-        @Override
-        public void action() {
-
-
-        }
-    };
-    int contractSatisfaction(RCPContract contract) {
-        int ret = 0;
-        int contractFinish = contract.getStart() + contract.getLongevity() - 1;
-        int scheduleFinish = unsharedResources.size();
-        ret -= (scheduleFinish - contractFinish) * resVolume;
-        ret += contract.getLongevity() * contract.getResNeed();
-        return ret;
-    }
-
-    Behaviour vote = new OneShotBehaviour() {
-        @Override
-        public void action() {
-        }
-    };
-
 }
