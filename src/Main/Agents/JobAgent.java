@@ -28,9 +28,9 @@ public class JobAgent extends Agent {
     private final int STARTUP_TEST = 1, TESTS_ENABLED = 1, TESTS_DISABLED = 0,
             TEST_FIND_FOLLOWERS = 2, TEST_FOLLOWERS_INFORM = 3, TEST_WAIT_FOR_FOLLOWERS = 4,
             TEST_CONTRACT_BASE_MAKING = 5,TEST_SEND_CONTRACT = 6, TEST_SEND_ALL_CONTRACTS = 7,
-            TEST_GET_FIRST_RESPONSE = 8,
-            TEST_MAKE_UNCONSTRAINED_SOLUTION = 9;
-    int testMode = TESTS_ENABLED, testProgram = TEST_GET_FIRST_RESPONSE;
+            TEST_GET_FIRST_RESPONSE = 8, TEST_FULL_RUN = 9,
+            TEST_MAKE_UNCONSTRAINED_SOLUTION = 10;
+    int testMode = TESTS_ENABLED, testProgram = TEST_FULL_RUN;
     String myContractBase;
     MessageTemplate sentByResource;
     MessageTemplate resourceAccept, resourceDecline;
@@ -373,14 +373,15 @@ public class JobAgent extends Agent {
         }
         return ret;
     }
-    //MessageTemplate  fromResource(){
 
-    //}
     Behaviour sendMyFinish = new CyclicBehaviour() {
         @Override
         public void action() {
             if (successorPointer == successorsAddresses.size()){
-                System.out.println("job #" + jobNumber + ": finished informing successors about active contract");
+                if (testMode == TESTS_ENABLED){
+                    System.out.println("job #" + jobNumber + ": finished informing successors about active contract");
+                }
+
                 myAgent.addBehaviour(waitState);
 
                 myAgent.removeBehaviour(sendMyFinish);
