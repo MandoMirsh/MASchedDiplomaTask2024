@@ -30,8 +30,9 @@ public class ResourceAgent extends Agent {
              ALWAYS_SEND_ACCEPT = 5, ALWAYS_SEND_REJECT = 6,
             TEST_CONTRACT_LIST_FORMATION = 7,
             CHECK_SATISFACTION_COMPUTATION = 8, CHECK_VOTE_SEND_RECEIVE = 9,
-            CHECK_FIRST_CONTRACT_APPLICATION = 10, CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME = 11;
-    int testMode = TESTS_ENABLED, testProgram = CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME;
+            CHECK_FIRST_CONTRACT_APPLICATION = 10, CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME = 11,
+            TEST_FULL_RUN = 12;
+    int testMode = TESTS_ENABLED, testProgram = TEST_FULL_RUN;
     ArrayList<AID> resources = new ArrayList<>();
     int timer, tickPeriod = 1000;
     int resName, resVolume, resTypeCount;
@@ -120,7 +121,7 @@ public class ResourceAgent extends Agent {
     Behaviour waitForFirstContract = new TickerBehaviour(this, tickPeriod / 2) {
         @Override
         protected void onTick() {
-            MASolverContractDetails newContractDetails = checknewContract();
+            MASolverContractDetails newContractDetails = checkNewContract();
             if (newContractDetails.getContract() != null) {
                 if (testMode == TESTS_ENABLED) {
                     System.out.println("Res #" + resName + ": got new contract from job #"
@@ -155,7 +156,7 @@ public class ResourceAgent extends Agent {
                                 System.out.println("Res #" + resName + ": contract #"
                                         + newContractDetails.getContract().getJobName() + " is possible right now");
                             }
-                            contractDetails.add(newContractDetails);
+                            addContractDetails(newContractDetails);
                         }
                         else {
                             if (testMode == TESTS_ENABLED) {
@@ -177,7 +178,7 @@ public class ResourceAgent extends Agent {
     Behaviour waitForAdditionalContracts = new CyclicBehaviour() {
         @Override
         public void action() {
-             MASolverContractDetails newContractDetails = checknewContract();
+             MASolverContractDetails newContractDetails = checkNewContract();
             if (newContractDetails.getContract() != null) {
                 if (testMode == TESTS_ENABLED) {
                     System.out.println("Res #" + resName + ": got new contract from job #"
@@ -188,7 +189,7 @@ public class ResourceAgent extends Agent {
                         System.out.println("Res #" + resName + ": contract #"
                                 + newContractDetails.getContract().getJobName() + " is possible right now");
                     }
-                    contractDetails.add(newContractDetails);
+                    addContractDetails(newContractDetails);
                 }
                 else{
                     sendReject(contractConflictPoint,newContractDetails.getContacts());
@@ -197,7 +198,7 @@ public class ResourceAgent extends Agent {
             }
         }
     };
-    MASolverContractDetails checknewContract(){
+    MASolverContractDetails checkNewContract(){
         MASolverContractDetails ret = new MASolverContractDetails();
         ret.setContract(null);
         ret.setContacts(null);
@@ -245,20 +246,37 @@ public class ResourceAgent extends Agent {
         msg.addReceiver(receiver);
         send(msg);
     }
+    void addContractDetails(MASolverContractDetails newContractDetails){
+        if (contractIsNew(newContractDetails)) {
+            contractDetails.add(newContractDetails);
+        }
+        else{
 
+            int place =  searchContractPlaceByContractor(Integer.parseInt(
+                    newContractDetails.getContract().getJobName()));
+            if (contractDetails.get(place).getContract().getStart() < newContractDetails.getContract().getStart()) {
+                contractDetails.set(place,newContractDetails);
+            }
+        }
+    }
 
-    Behaviour timer1 = new WakerBehaviour(this,tickPeriod * 5) {
+    boolean contractIsNew(MASolverContractDetails contractRecord) {
+        return searchContractPlaceByContractor(Integer.parseInt(contractRecord.getContract().getJobName())) == -1;
+    }
+
+    Behaviour timer1 = new WakerBehaviour(this,tickPeriod * 5L) {
         @Override
         protected void onWake() {
             super.onWake();
             myAgent.addBehaviour(timer2);
         }
     };
-    Behaviour timer2 = new TickerBehaviour(this, tickPeriod) {
+    Behaviour timer2 = new TickerBehaviour(this, tickPeriod / 2) {
         @Override
         protected void onTick() {
 
             if (timer == 0) {
+                System.out.println("Round starts");
                 myAgent.addBehaviour(markContracts);
                 myAgent.removeBehaviour(waitForAdditionalContracts);
                 contractPointer = 0;
@@ -323,7 +341,7 @@ public class ResourceAgent extends Agent {
         public void action() {
             String myVote = contractDetails.get(bestContractPointer).getContract().getJobName();
             sendToResources(myVote);
-            recieveVotesFromResources();
+            receiveVotesFromResources();
         }
     };
     void sendToResources(String message){
@@ -348,7 +366,7 @@ public class ResourceAgent extends Agent {
         msg.addReceiver(sendTo);
         send(msg);
     }
-    void recieveVotesFromResources(){
+    void receiveVotesFromResources(){
         votes.clear();
         addBehaviour(getResourceVotes);
     }
@@ -492,7 +510,7 @@ public class ResourceAgent extends Agent {
                 }
                 else{
                     if (!contractIsPossible(contractDetails.get(contractPointer).getContract())){
-                        removeUnsuitableContractDetails(contractPointer);
+                        removeUnsuitableContractDetails(contractPointer--);
                     }
                 }
                 contractPointer++;
@@ -502,7 +520,9 @@ public class ResourceAgent extends Agent {
     };
     private void removeUnsuitableContractDetails(int pointer) {
         MASolverContractDetails unsuitable = contractDetails.remove(pointer);
-        sendReject(contractConflictPoint,unsuitable.getContacts());
+        sendReject(contractConflictPoint, unsuitable.getContacts());
     }
+    private void reconfigureFromString(String params){
 
+    }
 }
