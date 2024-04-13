@@ -27,9 +27,9 @@ public class JobAgent extends Agent {
 
     private final int STARTUP_TEST = 1, TESTS_ENABLED = 1, TESTS_DISABLED = 0,
             TEST_FIND_FOLLOWERS = 2, TEST_FOLLOWERS_INFORM = 3, TEST_WAIT_FOR_FOLLOWERS = 4,
-            TEST_CONTRACT_BASE_MAKING = 5,TEST_SEND_CONTRACT = 6, TEST_SEND_ALL_CONTRACTS = 7,
-            TEST_GET_FIRST_RESPONSE = 8, TEST_FULL_RUN = 9,
-            TEST_MAKE_UNCONSTRAINED_SOLUTION = 10;
+            TEST_CONTRACT_BASE_MAKING = 5,TEST_SEND_CONTRACT = 6, TEST_SEND_CONTRACT_AGAIN = 7,
+            TEST_SEND_ALL_CONTRACTS = 8, TEST_GET_FIRST_RESPONSE = 9, TEST_FULL_RUN = 10,
+            TEST_MAKE_UNCONSTRAINED_SOLUTION = 11;
     int testMode = TESTS_ENABLED, testProgram = TEST_FULL_RUN;
     String myContractBase;
     MessageTemplate sentByResource;
@@ -48,7 +48,8 @@ public class JobAgent extends Agent {
         }
         getResources();
         if (testMode == TESTS_ENABLED) {
-            System.out.println("job #" + jobNumber + ": found resource addresses. Number of resources found: "+ resAddresses.size());
+            //System.out.println("job #" + jobNumber + ": found resource addresses. Number of resources found: "
+            //                      + resAddresses.size());
         }
         generateTemplates();
     }
@@ -143,7 +144,7 @@ public class JobAgent extends Agent {
             fe.printStackTrace();
         }
     }
-    Behaviour informSuccessors = new TickerBehaviour(this, 1200) {
+    Behaviour informSuccessors = new TickerBehaviour(this, 600) {
         @Override
         public void onTick() {
             if (successorPointer == successors.size()) {
@@ -191,7 +192,7 @@ public class JobAgent extends Agent {
         }
         return ret;
     }
-    Behaviour waitForPredecessors = new TickerBehaviour(this, 500) {
+    Behaviour waitForPredecessors = new TickerBehaviour(this, 300) {
         @Override
         public void onTick() {
 
@@ -229,13 +230,13 @@ public class JobAgent extends Agent {
             }
             else{
                 if (testMode == TESTS_ENABLED) {
-                    System.out.println("Job #" + jobNumber + ": got no new predecessors telling");
+                    //System.out.println("Job #" + jobNumber + ": got no new predecessors telling");
                 }
             }
         }
     };
 
-    Behaviour countDownTillContractInitialization = new WakerBehaviour(this, 3500) {
+    Behaviour countDownTillContractInitialization = new WakerBehaviour(this, 2000) {
         @Override
         protected void onWake() {
             super.onWake();
@@ -298,7 +299,13 @@ public class JobAgent extends Agent {
                             + (resourcePointer + 1));
                 }
                 sendNextContract();
-                if ((testMode == TESTS_ENABLED) && (testProgram == TEST_SEND_CONTRACT)){
+
+                if ((testMode == TESTS_ENABLED) &&
+                        ((testProgram == TEST_SEND_CONTRACT)|| (testProgram == TEST_SEND_CONTRACT_AGAIN))){
+                    if (testProgram == TEST_SEND_CONTRACT_AGAIN){
+                        resourcePointer--;
+                        sendNextContract();
+                    }
                     myAgent.addBehaviour(sayTestsFinished);
                     myAgent.removeBehaviour(sendContracts);
                 }
@@ -331,17 +338,18 @@ public class JobAgent extends Agent {
                 if (startCorrection > currentStartConstraint){
                     if (testMode == TESTS_ENABLED){
                     System.out.println("Job #" + jobNumber + " got contract reject."
-                            + " Contract start is to be after t = " + startCorrection
-                            + ". Restarting contract sending procedure.");
+                            + " Contract start is to be after t = " + startCorrection);
                     }
                     if ((testMode == TESTS_ENABLED) && (testProgram == TEST_GET_FIRST_RESPONSE)){
                         myAgent.addBehaviour(sayTestsFinished);
                     }
                     else{
+                        System.out.println("Job #" + jobNumber + ": restarting contract sending procedure.");
                         currentStartConstraint = startCorrection;
                         myAgent.addBehaviour(makeNewContractBase);
 
                     }
+                    resourcePointer = 0;
                     myAgent.removeBehaviour(waitForResponses);
                 }
                 if(foundApprove()){
