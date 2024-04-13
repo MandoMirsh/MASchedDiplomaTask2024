@@ -15,6 +15,8 @@ import jade.lang.acl.MessageTemplate;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import static java.time.LocalDateTime.now;
+
 public class ResourceAgent extends Agent {
     private
     ArrayList<MASolverContractDetails> contractDetails = new ArrayList<>();
@@ -27,12 +29,13 @@ public class ResourceAgent extends Agent {
                         GET_FIRST_CONTRACT = 3, GET_ALL_CONTRACTS = 4,
              ALWAYS_SEND_ACCEPT = 5, ALWAYS_SEND_REJECT = 6,
             TEST_CONTRACT_LIST_FORMATION = 7,
-            CHECK_SATISFACTION_COMPUTATION = 8, CHECK_VOTE_SEND_RECEIVE = 9;
-    int testMode = TESTS_ENABLED, testProgram = CHECK_VOTE_SEND_RECEIVE;
+            CHECK_SATISFACTION_COMPUTATION = 8, CHECK_VOTE_SEND_RECEIVE = 9,
+            CHECK_FIRST_CONTRACT_APPLICATION = 10, CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME = 11;
+    int testMode = TESTS_ENABLED, testProgram = CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME;
     ArrayList<AID> resources = new ArrayList<>();
     int timer, tickPeriod = 1000;
     int resName, resVolume, resTypeCount;
-    int satisfaction = 0, contractConflictPoint = 0;
+    int satisfaction = 0, contractConflictPoint = 0, possibleFraudTimes = 0;
     ArrayList<Integer> unsharedResources = new ArrayList<>();
     private final int RES_TYPE_COUNT = 4;
     MessageTemplate proposal = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);
@@ -45,7 +48,8 @@ public class ResourceAgent extends Agent {
         getStartingParams();
         setServices();
         if (testMode == TESTS_ENABLED) {
-            System.out.println(this.getName() + ": resource #" + resName + "; res Volume: " + resVolume + "; resources total: "+ resTypeCount);
+            System.out.println(this.getName() + ": resource #" + resName + "; res Volume: " + resVolume
+                    + "; resources total: "+ resTypeCount);
         }
         if ((testMode != TESTS_ENABLED) || (testProgram != JUST_TELL_PARAMS)) {
             resInform = MessageTemplate.MatchSender(getAID());
@@ -122,7 +126,8 @@ public class ResourceAgent extends Agent {
                     System.out.println("Res #" + resName + ": got new contract from job #"
                             + newContractDetails.getContract().getJobName());
                 }
-                if ((testMode == TESTS_ENABLED) && ((testProgram == GET_FIRST_CONTRACT) || (testProgram == GET_ALL_CONTRACTS))){
+                if ((testMode == TESTS_ENABLED) &&
+                        ((testProgram == GET_FIRST_CONTRACT) || (testProgram == GET_ALL_CONTRACTS))){
                     System.out.println("Res #" + resName + ": contract details are: "
                             + newContractDetails.getContract().toString());
                     if (testProgram == GET_FIRST_CONTRACT){
@@ -131,14 +136,16 @@ public class ResourceAgent extends Agent {
                     }
                 }
                 else {
-                    if ((testMode == TESTS_ENABLED) && ((testProgram == ALWAYS_SEND_ACCEPT)||(testProgram == ALWAYS_SEND_REJECT))){
-
+                    if ((testMode == TESTS_ENABLED) &&
+                            ((testProgram == ALWAYS_SEND_ACCEPT)||(testProgram == ALWAYS_SEND_REJECT))){
                         if (testProgram == ALWAYS_SEND_ACCEPT){
-                            System.out.println("Res #" + resName + ": accepted contract according to the test scenario.");
+                            System.out.println("Res #" + resName
+                                    + ": accepted contract according to the test scenario.");
                             sendAccept(newContractDetails.getContacts());
                         }
                         else{
-                            System.out.println("Res #" + resName + ": rejected contract according to the test scenario.");
+                            System.out.println("Res #" + resName
+                                    + ": rejected contract according to the test scenario.");
                             sendReject(newContractDetails.getContract().getStart(),newContractDetails.getContacts());
                         }
                     }
@@ -155,7 +162,7 @@ public class ResourceAgent extends Agent {
                                 System.out.println("Res #" + resName + ": contract #"
                                         + newContractDetails.getContract().getJobName() + " is not possible right now");
                             }
-
+                            sendReject(contractConflictPoint,newContractDetails.getContacts());
                         }
                         myAgent.addBehaviour(timer1);
                         myAgent.addBehaviour(waitForAdditionalContracts);
@@ -218,12 +225,13 @@ public class ResourceAgent extends Agent {
         int contractStart = contract.getStart();
         //int contractFinish = contractStart + contract.getLongevity() - 1;
         int scheduleFinish = unsharedResources.size();
-        int intersectionLen = scheduleFinish - contractStart + 1;
+        int intersectionLen = scheduleFinish - contractStart;
         if (contractStart > scheduleFinish){
             return ret;
         }
         for ( int i = 0; i < intersectionLen; i++){
             if (unsharedResources.get(contractStart + i) < contract.getResNeed()) {
+                contractConflictPoint = contractStart + i;
                 return false;
             }
         }
@@ -238,13 +246,8 @@ public class ResourceAgent extends Agent {
         send(msg);
     }
 
-    Behaviour renewAllMarks = new CyclicBehaviour() {
-        @Override
-        public void action() {
 
-        }
-    };
-    Behaviour timer1 = new WakerBehaviour(this,tickPeriod * 10) {
+    Behaviour timer1 = new WakerBehaviour(this,tickPeriod * 5) {
         @Override
         protected void onWake() {
             super.onWake();
@@ -268,11 +271,7 @@ public class ResourceAgent extends Agent {
         }
     };
 
-    void sendAccept(AID receiver) {
-        ACLMessage msg = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
-        msg.addReceiver(receiver);
-        send(msg);
-    }
+
 
 
     Behaviour markContracts = new CyclicBehaviour() {
@@ -296,7 +295,8 @@ public class ResourceAgent extends Agent {
                     }
                 }
                 else {
-                    int currentContractCheckedSatisfaction = contractSatisfaction(contractDetails.get(contractPointer).getContract());
+                    int currentContractCheckedSatisfaction =
+                            contractSatisfaction(contractDetails.get(contractPointer).getContract());
                     if (currentContractCheckedSatisfaction > bestContractValue) {
                         bestContractPointer = contractPointer;
                         bestContractValue = currentContractCheckedSatisfaction;
@@ -358,6 +358,7 @@ public class ResourceAgent extends Agent {
             if (votes.size() == resources.size()) {
                 myAgent.addBehaviour(decideFirstRound);
                 myAgent.removeBehaviour(getResourceVotes);
+                //System.out.println("Res #" + resName + ": got all votes" + now());
             }
             else{
                 String anotherMessage = receiveResourceOpinion();
@@ -380,23 +381,128 @@ public class ResourceAgent extends Agent {
         @Override
         public void action(){
             if ((testMode == TESTS_ENABLED) && (testProgram == CHECK_VOTE_SEND_RECEIVE)){
-                System.out.println("Res #" + resName + ": got these vote results: " + votes);
+                System.out.println("Res #" + resName + ": got these vote results: " + votes + "by " + now());
+            }
+            else{
+                MASolverContractDetails winnerContract = getContractByContractor(getWinnerContractor());
+                sendAccept(winnerContract.getContacts());
+                applyContract(winnerContract.getContract());
+                if ((testMode == TESTS_ENABLED) && (testProgram == CHECK_FIRST_CONTRACT_APPLICATION)){
+                    System.out.println("Res #" + resName + ": applied chosen contract. Now satisfaction is "
+                            + satisfaction + " schedule length = " + unsharedResources.size()+
+                            " and schedule's free resource quantity is: " + unsharedResources);
+                }
+                else {
+                    checkCurrentContractPossibilities();
+                }
             }
         }
     };
+    MASolverContractDetails getContractByContractor(int contractor) {
+        int contractPlace = searchContractPlaceByContractor(contractor);
+        if (contractPlace == -1) return null;
+        return contractDetails.remove(contractPlace);
+    }
+    int searchContractPlaceByContractor(int contractor){
+        int ret = -1;
+        int i = 0;
+        while (i < contractDetails.size()){
+            if (Integer.parseInt(contractDetails.get(i).getContract().getJobName()) == contractor)
+                ret = i;
+            i++;
+        }
+        return ret;
+    }
+    int getWinnerContractor(){
+        Collections.sort(votes);
+        int i = 1;
+        int currentBest = votes.get(0), current = currentBest, bestVotes = 1, currentVotes = 1;
+        while ( i < votes.size()){
+            if (votes.get(i) == current) {
+                if (++currentVotes>bestVotes){
+                    currentBest = current;
+                    bestVotes = currentVotes;
+                }
+            }
+            else {
+                current = votes.get(i);
+                currentVotes = 1;
+            }
+            i++;
+        }
+
+        if (bestVotes < (resTypeCount / 2)){
+            possibleFraudTimes++;
+        }
+        return currentBest;
+    }
+    void sendAccept(AID receiver) {
+        ACLMessage msg = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
+        msg.addReceiver(receiver);
+        send(msg);
+    }
     void applyContract (RCPContract contract) {
         int contractStart = contract.getStart();
         int contractLongevity = contract.getLongevity();
         int contractFinish = contractStart + contractLongevity - 1;
         int scheduleFinish = unsharedResources.size();
-        int scheduleTimeAddition = contractLongevity - scheduleFinish + contractStart - 1;
+        int scheduleTimeAddition = contractLongevity - scheduleFinish + contractStart;
+
+        satisfaction += contractSatisfaction(contract);
+
         for ( int i = 0; i < scheduleTimeAddition; i++){
             unsharedResources.add(resVolume);
         }
+
         for ( int i = 0; i < contractLongevity; i++){
             int subtractFrom = unsharedResources.get(contractStart + i);
             int changeTo = subtractFrom - contract.getResNeed();
             unsharedResources.set(contractStart + i,changeTo);
         }
+
     }
+    private void checkCurrentContractPossibilities(){
+        contractPointer = 0;
+        addBehaviour(renewPossibilities);
+    }
+    Behaviour renewPossibilities = new CyclicBehaviour() {
+        @Override
+        public void action() {
+            if (contractPointer == contractDetails.size()){
+                if ((testMode == TESTS_ENABLED) && (testProgram == CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME)){
+                    System.out.println("Res #" + resName +": finished reviewing contracts");
+                }
+                else{
+                    myAgent.addBehaviour(waitForFirstContract);
+                }
+                myAgent.removeBehaviour(renewPossibilities);
+            }
+            else{
+                if ((testMode == TESTS_ENABLED) && (testProgram == CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME)){
+                    if (contractIsPossible(contractDetails.get(contractPointer).getContract())){
+                        System.out.println("Res #" + resName + ": contract from "
+                                + contractDetails.get(contractPointer).getContract().getJobName()
+                                + " is still possible");
+                    }
+                    else {
+                        System.out.println("Res #" + resName + ": contract from "
+                                + contractDetails.get(contractPointer).getContract().getJobName()
+                                + " is not possible now");
+                    }
+                }
+                else{
+                    if (!contractIsPossible(contractDetails.get(contractPointer).getContract())){
+                        removeUnsuitableContractDetails(contractPointer);
+                    }
+                }
+                contractPointer++;
+            }
+
+        }
+    };
+    private void removeUnsuitableContractDetails(int pointer) {
+        MASolverContractDetails unsuitable = contractDetails.remove(pointer);
+        sendReject(contractConflictPoint,unsuitable.getContacts());
+    }
+
 }
