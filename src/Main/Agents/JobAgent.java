@@ -24,9 +24,9 @@ public class JobAgent extends Agent {
     int successorPointer = 0, resourcePointer = 0, followersPointer = 0;
     int timeNeed, currentPredecessorsFinish = -400, currentStartConstraint, approvalCount = 0,
         predecessorsNonActive = 0, predecessorsTotal = 0;
+    private final int TESTS_ENABLED = 1, TESTS_DISABLED = 0;
 
-    private final int STARTUP_TEST = 1, TESTS_ENABLED = 1, TESTS_DISABLED = 0,
-            TEST_FIND_FOLLOWERS = 2, TEST_FOLLOWERS_INFORM = 3, TEST_WAIT_FOR_FOLLOWERS = 4,
+    private final int STARTUP_TEST = 1, TEST_FIND_FOLLOWERS = 2, TEST_FOLLOWERS_INFORM = 3, TEST_WAIT_FOR_FOLLOWERS = 4,
             TEST_CONTRACT_BASE_MAKING = 5,TEST_SEND_CONTRACT = 6, TEST_SEND_CONTRACT_AGAIN = 7,
             TEST_SEND_ALL_CONTRACTS = 8, TEST_GET_FIRST_RESPONSE = 9, TEST_FULL_RUN = 10,
             TEST_MAKE_UNCONSTRAINED_SOLUTION = 11;
@@ -236,7 +236,7 @@ public class JobAgent extends Agent {
         }
     };
 
-    Behaviour countDownTillContractInitialization = new WakerBehaviour(this, 2000) {
+    Behaviour countDownTillContractInitialization = new WakerBehaviour(this, 500) {
         @Override
         protected void onWake() {
             super.onWake();

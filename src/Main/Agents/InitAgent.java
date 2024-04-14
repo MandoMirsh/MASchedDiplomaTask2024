@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.Properties;
 
 import static java.lang.Math.random;
+import static java.time.LocalDateTime.now;
 
 public class InitAgent extends Agent {
     Connection conn;
@@ -50,6 +51,8 @@ public class InitAgent extends Agent {
     int projectId = 30101, projectsLeft = 1;
     String getTaskFromDBString = "select task from public.tasks\n" +
             "where id = ?";
+    String insertResultsToDB = "insert into  public.results (id, result)\n"
+            + "values ( ? , ? )";
     int sourceSuccessorsPointer = 0, successorInformationPointer = 0;
     int resConfigurationPointer = 0, jobConfigurationPointer = 1;
     int currentSinkPredecessorsFinish = -1;
@@ -430,7 +433,7 @@ public class InitAgent extends Agent {
         mes.addReceiver(successor);
         send(mes);
     }
-    Behaviour waitForSinkPredecessors = new TickerBehaviour(this, 1500) {
+    Behaviour waitForSinkPredecessors = new TickerBehaviour(this, 3000) {
         @Override
         public void onTick() {
             if (testMode == TESTS_ENABLED){

@@ -24,6 +24,7 @@ public class ResourceAgent extends Agent {
     ArrayList<RCPContract> contractShortList = new ArrayList<>();
     int bestContractPointer = -1, bestContractValue = -4000;
     int contractPointer = 0;
+    boolean anyContractReceived = false;
     final static int TESTS_ENABLED = 1, TESTS_DISABLED = 0;
     final static int  NO_PROGRAM = 0, JUST_TELL_PARAMS = 1, FIND_OTHER_RESOURCES = 2,
                         GET_FIRST_CONTRACT = 3, GET_ALL_CONTRACTS = 4,
@@ -37,6 +38,7 @@ public class ResourceAgent extends Agent {
     int timer, tickPeriod = 1000;
     int resName, resVolume, resTypeCount;
     int satisfaction = 0, contractConflictPoint = 0, possibleFraudTimes = 0;
+    int acceptedContracts = 0;
     ArrayList<Integer> unsharedResources = new ArrayList<>();
     private final int RES_TYPE_COUNT = 4;
     MessageTemplate proposal = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);
@@ -123,6 +125,7 @@ public class ResourceAgent extends Agent {
         protected void onTick() {
             MASolverContractDetails newContractDetails = checkNewContract();
             if (newContractDetails.getContract() != null) {
+                anyContractReceived = true;
                 if (testMode == TESTS_ENABLED) {
                     System.out.println("Res #" + resName + ": got new contract from job #"
                             + newContractDetails.getContract().getJobName());
@@ -165,11 +168,11 @@ public class ResourceAgent extends Agent {
                             }
                             sendReject(contractConflictPoint,newContractDetails.getContacts());
                         }
-                        myAgent.addBehaviour(timer1);
-                        myAgent.addBehaviour(waitForAdditionalContracts);
+                        addTimer1();
+                        //myAgent.addBehaviour(waitForAdditionalContracts);
+                        additionalContractWaiting();
                         myAgent.removeBehaviour(waitForFirstContract);
                     }
-
                 }
             }
         }
@@ -198,6 +201,34 @@ public class ResourceAgent extends Agent {
             }
         }
     };
+
+    private void additionalContractWaiting(){
+        waitForAdditionalContracts = new TickerBehaviour(this, tickPeriod / 10 ) {
+            @Override
+            protected void onTick() {
+                MASolverContractDetails newContractDetails = checkNewContract();
+                if (newContractDetails.getContract() != null) {
+                    if (testMode == TESTS_ENABLED) {
+                        System.out.println("Res #" + resName + ": got new contract from job #"
+                                + newContractDetails.getContract().getJobName());
+                    }
+                    if (contractIsPossible(newContractDetails.getContract())){
+                        if (testMode == TESTS_ENABLED) {
+                            System.out.println("Res #" + resName + ": contract #"
+                                    + newContractDetails.getContract().getJobName() + " is possible right now");
+                        }
+                        addContractDetails(newContractDetails);
+                    }
+                    else{
+                        sendReject(contractConflictPoint,newContractDetails.getContacts());
+                    }
+                    timer++;
+                }
+            }
+        };
+        addBehaviour(waitForAdditionalContracts);
+    }
+
     MASolverContractDetails checkNewContract(){
         MASolverContractDetails ret = new MASolverContractDetails();
         ret.setContract(null);
@@ -264,39 +295,55 @@ public class ResourceAgent extends Agent {
         return searchContractPlaceByContractor(Integer.parseInt(contractRecord.getContract().getJobName())) == -1;
     }
 
-    Behaviour timer1 = new WakerBehaviour(this,tickPeriod * 5L) {
-        @Override
-        protected void onWake() {
-            super.onWake();
-            myAgent.addBehaviour(timer2);
-        }
-    };
-    Behaviour timer2 = new TickerBehaviour(this, tickPeriod / 2) {
-        @Override
-        protected void onTick() {
+    Behaviour timer1;
 
-            if (timer == 0) {
-                System.out.println("Round starts");
-                myAgent.addBehaviour(markContracts);
-                myAgent.removeBehaviour(waitForAdditionalContracts);
-                contractPointer = 0;
-                bestContractValue = -4000;
-                myAgent.removeBehaviour(timer2);
+    private void addTimer1(){
+        timer1 = new WakerBehaviour(this,tickPeriod * 5L) {
+            @Override
+            protected void onWake() {
+                super.onWake();
+                addTimer2();
             }
-            else {
-                timer--;
+        };
+        addBehaviour(timer1);
+    }
+    Behaviour timer2;
+    private void addTimer2(){
+        timer2 = new TickerBehaviour(this, tickPeriod / 2) {
+            @Override
+            protected void onTick() {
+
+                if (timer == 0) {
+                    System.out.println("Round starts");
+                    searchForBestContract();
+                    myAgent.removeBehaviour(waitForAdditionalContracts);
+                    myAgent.removeBehaviour(timer2);
+                }
+                else {
+                    timer--;
+                }
             }
-        }
-    };
+        };
+        addBehaviour(timer2);
+    }
 
-
+    private void searchForBestContract(){
+        addBehaviour(markContracts);
+        contractPointer = 0;
+        bestContractValue = -4000;
+    }
 
 
     Behaviour markContracts = new CyclicBehaviour() {
         @Override
         public void action() {
             if (contractPointer == contractDetails.size()) {
-                myAgent.addBehaviour(voteStart);
+                if (contractDetails.isEmpty()){
+                    addTimer3();
+                }
+                else{
+                    myAgent.addBehaviour(voteStart);
+                }
                 myAgent.removeBehaviour(markContracts);
             }
             else{
@@ -405,6 +452,13 @@ public class ResourceAgent extends Agent {
                 MASolverContractDetails winnerContract = getContractByContractor(getWinnerContractor());
                 sendAccept(winnerContract.getContacts());
                 applyContract(winnerContract.getContract());
+                acceptedContracts++;
+                if (testMode == TESTS_ENABLED) {
+                    System.out.println("Res #" + resName + ": accepted " + acceptedContracts + " contracts already.");
+                    if (acceptedContracts % 10 == 0){
+                        System.out.println("Res # " + resName + ": current schedule: " + unsharedResources);
+                    }
+                }
                 if ((testMode == TESTS_ENABLED) && (testProgram == CHECK_FIRST_CONTRACT_APPLICATION)){
                     System.out.println("Res #" + resName + ": applied chosen contract. Now satisfaction is "
                             + satisfaction + " schedule length = " + unsharedResources.size()+
@@ -493,9 +547,10 @@ public class ResourceAgent extends Agent {
                 else{
                     myAgent.addBehaviour(waitForFirstContract);
                 }
+                addTimer3();
                 myAgent.removeBehaviour(renewPossibilities);
             }
-            else{
+            else {
                 if ((testMode == TESTS_ENABLED) && (testProgram == CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME)){
                     if (contractIsPossible(contractDetails.get(contractPointer).getContract())){
                         System.out.println("Res #" + resName + ": contract from "
@@ -515,9 +570,24 @@ public class ResourceAgent extends Agent {
                 }
                 contractPointer++;
             }
-
         }
     };
+    Behaviour timer3;
+    private void addTimer3(){
+        anyContractReceived = false;
+        timer3 = new WakerBehaviour(this, tickPeriod) {
+            @Override
+            protected void onWake() {
+                super.onWake();
+                if (!anyContractReceived) {
+                    myAgent.removeBehaviour(waitForFirstContract);
+                    searchForBestContract();
+                }
+                myAgent.removeBehaviour(timer3);
+            }
+        };
+        addBehaviour(timer3);
+    }
     private void removeUnsuitableContractDetails(int pointer) {
         MASolverContractDetails unsuitable = contractDetails.remove(pointer);
         sendReject(contractConflictPoint, unsuitable.getContacts());
