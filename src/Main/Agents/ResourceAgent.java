@@ -181,8 +181,9 @@ public class ResourceAgent extends Agent {
     Behaviour waitForAdditionalContracts = new CyclicBehaviour() {
         @Override
         public void action() {
-             MASolverContractDetails newContractDetails = checkNewContract();
+            MASolverContractDetails newContractDetails = checkNewContract();
             if (newContractDetails.getContract() != null) {
+                anyContractReceived = true;
                 if (testMode == TESTS_ENABLED) {
                     System.out.println("Res #" + resName + ": got new contract from job #"
                             + newContractDetails.getContract().getJobName());
@@ -264,7 +265,7 @@ public class ResourceAgent extends Agent {
         for ( int i = 0; i < intersectionLen; i++){
             if (unsharedResources.get(contractStart + i) < contract.getResNeed()) {
                 contractConflictPoint = contractStart + i;
-                return false;
+                ret = false;
             }
         }
 
@@ -298,7 +299,7 @@ public class ResourceAgent extends Agent {
     Behaviour timer1;
 
     private void addTimer1(){
-        timer1 = new WakerBehaviour(this,tickPeriod * 5L) {
+        timer1 = new WakerBehaviour(this,tickPeriod * 2L) {
             @Override
             protected void onWake() {
                 super.onWake();
@@ -340,6 +341,7 @@ public class ResourceAgent extends Agent {
             if (contractPointer == contractDetails.size()) {
                 if (contractDetails.isEmpty()){
                     addTimer3();
+                    myAgent.addBehaviour(waitForFirstContract);
                 }
                 else{
                     myAgent.addBehaviour(voteStart);

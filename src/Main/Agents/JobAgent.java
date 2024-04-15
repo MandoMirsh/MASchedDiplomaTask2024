@@ -92,10 +92,13 @@ public class JobAgent extends Agent {
         for (String s : s2) {
             resVolumes.add(Integer.parseInt(s));
         }
-        s2 = s1[2].split(",");
-        for (String s : s2) {
-            followers.add(Integer.parseInt(s));
+        if (s1.length > 2){
+            s2 = s1[2].split(",");
+            for (String s : s2) {
+                followers.add(Integer.parseInt(s));
+            }
         }
+
     }
     Behaviour tickingFindSuccessors = new TickerBehaviour(this, 1000) {
         @Override
@@ -390,12 +393,12 @@ public class JobAgent extends Agent {
                     System.out.println("job #" + jobNumber + ": finished informing successors about active contract");
                 }
 
-                myAgent.addBehaviour(waitState);
+                //myAgent.addBehaviour(waitState);
 
                 myAgent.removeBehaviour(sendMyFinish);
             }
             else{
-                sendImReady(successorsAddresses.get(successorPointer++),currentPredecessorsFinish + timeNeed);
+                sendImReady(successorsAddresses.get(successorPointer++),currentStartConstraint + timeNeed);
             }
 
         }
