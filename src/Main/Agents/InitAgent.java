@@ -134,8 +134,6 @@ public class InitAgent extends Agent {
                 TaskModel source = currentProblem.getTasks().get(0);
                 sourceSuccessors = source.getSuccessors();
             }
-            projectId = getNextId(projectId);
-            projectsLeft--;
 
             if (testMode == TESTS_ENABLED) {
                 System.out.println("Projects Left :" + projectsLeft);
@@ -493,7 +491,8 @@ public class InitAgent extends Agent {
     Behaviour sayCurrentResult =  new OneShotBehaviour() {
         @Override
         public void action() {
-            System.out.println("Project #" + projectId + ": solved. Total Solution time: " + currentSinkPredecessorsFinish);
+            System.out.println("Project #" + projectId + ": solved. Total Solution time: "
+                    + (currentSinkPredecessorsFinish + 1));
             if ((testMode == TESTS_ENABLED) && (testProgram == TEST_FIRST_RESULT)) {
                 myAgent.addBehaviour(waitAndShutTheNet);
             }
@@ -505,7 +504,7 @@ public class InitAgent extends Agent {
     Behaviour getNextProject = new OneShotBehaviour() {
         @Override
         public void action() {
-
+            nextProject();
             if (projectsLeft == 0) {
                 if (testMode == TESTS_ENABLED){
                     System.out.println("No projects left to solve");
@@ -513,11 +512,9 @@ public class InitAgent extends Agent {
                 myAgent.addBehaviour(shutTheNet);
             }
             else {
-                currentProblem = getProblem(projectId);
                 if (testMode == TESTS_ENABLED) {
                     System.out.println("Got next project: " + projectId);
                 }
-                projectId = getNextId(projectId);
                 if ((testMode != TESTS_ENABLED)||(testProgram != TEST_GETTING_NEXT_PROJECT)){
                     myAgent.addBehaviour(netReconfigurationPreparement);
                 }
@@ -527,6 +524,10 @@ public class InitAgent extends Agent {
             }
         }
     };
+    void nextProject(){
+        projectId = getNextId(projectId);
+        projectsLeft--;
+    }
 
     Behaviour netReconfigurationPreparement = new OneShotBehaviour() {
         @Override
