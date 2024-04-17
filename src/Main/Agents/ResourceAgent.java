@@ -32,17 +32,17 @@ public class ResourceAgent extends Agent {
             TEST_CONTRACT_LIST_FORMATION = 7,
             CHECK_SATISFACTION_COMPUTATION = 8, CHECK_VOTE_SEND_RECEIVE = 9,
             CHECK_FIRST_CONTRACT_APPLICATION = 10, CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME = 11,
-            TEST_FULL_RUN = 12;
-    int testMode = TESTS_ENABLED, testProgram = TEST_FULL_RUN;
+            TEST_FULL_RUN = 12, TEST_ACHIEVED_RECONFIGURATION_AWAIT_STATE = 13;
+    int testMode = TESTS_DISABLED, testProgram = TEST_FULL_RUN;
     ArrayList<AID> resources = new ArrayList<>();
     int timer, tickPeriod = 1000;
-    int resName, resVolume, resTypeCount;
+    int resName, resVolume, resTypeCount,jobCount;
     int satisfaction = 0, contractConflictPoint = 0, possibleFraudTimes = 0;
     int acceptedContracts = 0;
     ArrayList<Integer> unsharedResources = new ArrayList<>();
     private final int RES_TYPE_COUNT = 4;
     MessageTemplate proposal = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);
-    MessageTemplate resInform;
+    MessageTemplate resInform, request;
     int resourceMessagePointer;
     ArrayList<Integer> votes = new ArrayList<>();
     String messageToResources = "";
@@ -52,18 +52,23 @@ public class ResourceAgent extends Agent {
         setServices();
         if (testMode == TESTS_ENABLED) {
             System.out.println(this.getName() + ": resource #" + resName + "; res Volume: " + resVolume
-                    + "; resources total: "+ resTypeCount);
+                    + "; resources total: "+ resTypeCount + "; jobs in project: " + jobCount);
         }
         if ((testMode != TESTS_ENABLED) || (testProgram != JUST_TELL_PARAMS)) {
-            resInform = MessageTemplate.MatchSender(getAID());
+            setUpMessageTemplates();
             this.addBehaviour(findResources);
         }
+    }
+    private void setUpMessageTemplates(){
+        resInform = MessageTemplate.MatchSender(getAID());
+        request = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
     }
     private void getStartingParams(){
         Object[] args = getArguments();
         resTypeCount = Integer.parseInt((String)args[0]);
         resName = Integer.parseInt((String) args[1]);
         resVolume = Integer.parseInt((String) args[2]);
+        jobCount = Integer.parseInt((String) args[3]);
     }
     private void setServices(){
         DFAgentDescription dfd = new DFAgentDescription();
@@ -315,7 +320,7 @@ public class ResourceAgent extends Agent {
             protected void onTick() {
 
                 if (timer == 0) {
-                    System.out.println("Round starts");
+                    //System.out.println("Round starts");
                     searchForBestContract();
                     myAgent.removeBehaviour(waitForAdditionalContracts);
                     myAgent.removeBehaviour(timer2);
@@ -590,6 +595,37 @@ public class ResourceAgent extends Agent {
         };
         addBehaviour(timer3);
     }
+    Behaviour waitForReconfiguration = new CyclicBehaviour() {
+        @Override
+        public void action() {
+            if ((testMode == TESTS_ENABLED) && (testProgram == TEST_ACHIEVED_RECONFIGURATION_AWAIT_STATE)){
+                System.out.println("Res #" + resName + ": achieved reconfiguration state");
+                myAgent.removeBehaviour(waitForReconfiguration);
+            }
+            else{
+                tryToReconfigure();
+            }
+        }
+    };
+    ACLMessage tryToGetReconfigurationMessage(){
+        ACLMessage mes = receive(request);
+        return mes;
+    }
+    void tryToReconfigure(){
+        ACLMessage mes = tryToGetReconfigurationMessage();
+        if (mes == null) {
+            return;
+        }
+        String [] str = mes.getContent().split(" ");
+
+    }
+    void resetData(){
+
+    }
+    void sendConfirm(AID contact) {
+
+    }
+
     private void removeUnsuitableContractDetails(int pointer) {
         MASolverContractDetails unsuitable = contractDetails.remove(pointer);
         sendReject(contractConflictPoint, unsuitable.getContacts());

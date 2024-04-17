@@ -71,9 +71,10 @@ public class InitAgent extends Agent {
         getRunParams();
         if (testMode == TESTS_ENABLED) System.out.println(ZonedDateTime.now().toString() + ": " +
                 this.getAID().toString() + "started successfully");
-        if (testMode == TESTS_ENABLED) System.out.println("Params extracted: " + projectId + " " + projectsLeft + " " + howManyJobs);
+        if (testMode == TESTS_ENABLED) System.out.println("Params extracted: " + projectId
+                + " " + projectsLeft + " " + howManyJobs);
         if ((testMode == TESTS_ENABLED) && (testProgram == STARTUP_TEST)) {
-            this.addBehaviour(shutTheNet);
+            this.addBehaviour(successfullyTested);
         }
         else {
             this.addBehaviour(getFirstProjectDetails);
@@ -221,7 +222,8 @@ public class InitAgent extends Agent {
         try {
             AgentController ac = cc.createNewAgent(generateNextAgentNickname(),
                     "Main.Agents.ResourceAgent",
-                    new Object[]{((Integer)getHowManyResources()).toString(), ((Integer)(++resId)).toString(), ((Integer)resVolume).toString()});
+                    new Object[]{((Integer)getHowManyResources()).toString(), ((Integer)(++resId)).toString(),
+                            ((Integer)resVolume).toString(), ((Integer)howManyJobs).toString()});
             ac.start();
             Thread.sleep(500);
         } catch (StaleProxyException | InterruptedException e) {
@@ -491,8 +493,11 @@ public class InitAgent extends Agent {
     Behaviour sayCurrentResult =  new OneShotBehaviour() {
         @Override
         public void action() {
-            System.out.println("Project #" + projectId + ": solved. Total Solution time: "
-                    + (currentSinkPredecessorsFinish + 1));
+            //JOptionPane.showMessageDialog(null,"Project #" + projectId + ": solved. Total Solution time: "
+                   // + (currentSinkPredecessorsFinish + 1));
+            sendResultToDB(projectId,currentSinkPredecessorsFinish + 1);
+            //System.out.println("Project #" + projectId + ": solved. Total Solution time: "
+                    //+ (currentSinkPredecessorsFinish + 1));
             if ((testMode == TESTS_ENABLED) && (testProgram == TEST_FIRST_RESULT)) {
                 myAgent.addBehaviour(waitAndShutTheNet);
             }
@@ -521,6 +526,7 @@ public class InitAgent extends Agent {
                 else{
                     myAgent.addBehaviour(successfullyTested);
                 }
+                currentProblem = convertJSONtoProblemModel((getProblemFromDB(projectId)));
             }
         }
     };
@@ -571,6 +577,12 @@ public class InitAgent extends Agent {
     void sendJobReconfiguration(int jobPointer) {
 
     }
+    private void sendReconfigurationMessage(String reconfiguration, AID address){
+        ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+        msg.setContent("reconfigure " + reconfiguration);
+        msg.addReceiver(address);
+        send(msg);
+    }
     Behaviour waitAndShutTheNet = new WakerBehaviour(this, 4000) {
         @Override
         protected void onWake() {
@@ -619,6 +631,18 @@ public class InitAgent extends Agent {
         System.out.println("Successfully shut down controllerAgent");
         super.takeDown();
     }
+    private void sendResultToDB(int projectId, int result) {
+        PreparedStatement ps;
+        setDBConnectionInfo();
+        try{
+            ps = conn.prepareStatement(insertResultsToDB);
+            ps.setInt(1, projectId);
+            ps.setInt(2, result);
+            ps.executeUpdate();
+        } catch (SQLException e){
+            e.printStackTrace();
+        }
+    }
     private void deregister() {
         try {
             DFService.deregister(this);
@@ -626,6 +650,5 @@ public class InitAgent extends Agent {
         catch (FIPAException fe) {
             fe.printStackTrace();
         }
-
     }
 }

@@ -21,6 +21,7 @@ public class JobAgent extends Agent {
     ArrayList<Integer> resVolumes = new ArrayList<>();
     ArrayList<AID> successorsAddresses = new ArrayList<>();
     ArrayList<AID> resAddresses = new ArrayList<>();
+    AID instructionsSender;
     int successorPointer = 0, resourcePointer = 0, followersPointer = 0;
     int timeNeed, currentPredecessorsFinish = -400, currentStartConstraint, approvalCount = 0,
         predecessorsNonActive = 0, predecessorsTotal = 0;
@@ -30,10 +31,9 @@ public class JobAgent extends Agent {
             TEST_CONTRACT_BASE_MAKING = 5,TEST_SEND_CONTRACT = 6, TEST_SEND_CONTRACT_AGAIN = 7,
             TEST_SEND_ALL_CONTRACTS = 8, TEST_GET_FIRST_RESPONSE = 9, TEST_FULL_RUN = 10,
             TEST_MAKE_UNCONSTRAINED_SOLUTION = 11;
-    int testMode = TESTS_ENABLED, testProgram = TEST_FULL_RUN;
+    int testMode = TESTS_DISABLED, testProgram = TEST_FULL_RUN;
     String myContractBase;
-    MessageTemplate sentByResource;
-    MessageTemplate resourceAccept, resourceDecline;
+    MessageTemplate resourceAccept, resourceDecline,request;
     @Override
     public void setup(){
 
@@ -55,6 +55,7 @@ public class JobAgent extends Agent {
     }
 
     private void generateTemplates(){
+
         MessageTemplate accept = MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL);
 
         MessageTemplate reject = MessageTemplate.MatchPerformative(ACLMessage.REJECT_PROPOSAL);
@@ -64,6 +65,7 @@ public class JobAgent extends Agent {
         }
         resourceAccept = MessageTemplate.and(accept,tmp);
         resourceDecline = MessageTemplate.and(reject,tmp);
+        request = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
     }
 
 
@@ -417,6 +419,17 @@ public class JobAgent extends Agent {
         }
     };
 
+    private void reset(){
+
+    }
+    ACLMessage tryToGetReconfigurationMessage(){
+        ACLMessage mes = receive(request);
+        return mes;
+    }
+    private void moveToTheNextProject(){
+        addBehaviour(tickingFindSuccessors);
+        removeBehaviour(waitState);
+    }
     private void reconfigureFromString(String params){
         String [] s1 = params.split(";");
         timeNeed = Integer.parseInt(s1[0]);
@@ -428,7 +441,6 @@ public class JobAgent extends Agent {
         for (String s : s2) {
             followers.add(Integer.parseInt(s));
         }
-
     }
     Behaviour sayTestsFinished = new OneShotBehaviour() {
         @Override
