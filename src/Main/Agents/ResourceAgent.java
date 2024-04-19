@@ -11,6 +11,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import org.javatuples.Pair;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,7 +25,7 @@ public class ResourceAgent extends Agent {
     ArrayList<RCPContract> contractShortList = new ArrayList<>();
     int bestContractPointer = -1, bestContractValue = -4000;
     int contractPointer = 0;
-    boolean anyContractReceived = false;
+    boolean anyContractReceived = false, voteCheckPassed = true;
     final static int TESTS_ENABLED = 1, TESTS_DISABLED = 0;
     final static int  NO_PROGRAM = 0, JUST_TELL_PARAMS = 1, FIND_OTHER_RESOURCES = 2,
                         GET_FIRST_CONTRACT = 3, GET_ALL_CONTRACTS = 4,
@@ -33,15 +34,20 @@ public class ResourceAgent extends Agent {
             CHECK_SATISFACTION_COMPUTATION = 8, CHECK_VOTE_SEND_RECEIVE = 9,
             CHECK_FIRST_CONTRACT_APPLICATION = 10, CHECK_CONTRACT_POSSIBILITY_AFTER_VOTE_OUTCOME = 11,
             TEST_FULL_RUN = 12, TEST_ACHIEVED_RECONFIGURATION_AWAIT_STATE = 13;
-    int testMode = TESTS_DISABLED, testProgram = TEST_FULL_RUN;
+    int testMode = TESTS_ENABLED, testProgram = TEST_FULL_RUN;
     ArrayList<AID> resources = new ArrayList<>();
     int timer, tickPeriod = 1000;
-    int resName, resVolume, resTypeCount,jobCount;
+    int resName, resVolume, resTypeCount, jobCount, messageReceivedCounter;
     int satisfaction = 0, contractConflictPoint = 0, possibleFraudTimes = 0;
     int acceptedContracts = 0;
     ArrayList<Integer> unsharedResources = new ArrayList<>();
     private final int RES_TYPE_COUNT = 4;
     MessageTemplate proposal = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);
+    MessageTemplate resConfirmation = MessageTemplate.MatchPerformative(ACLMessage.CONFIRM),
+                    resDisconfirmation = MessageTemplate.MatchPerformative(ACLMessage.DISCONFIRM),
+                    okMessage = MessageTemplate.MatchContent("OK"),
+                    noMessage = MessageTemplate.MatchContent("NO"),
+                    okOrNoMessage = MessageTemplate.or(okMessage,noMessage);
     MessageTemplate resInform, request;
     int resourceMessagePointer;
     ArrayList<Integer> votes = new ArrayList<>();
@@ -98,6 +104,8 @@ public class ResourceAgent extends Agent {
                         resInform = MessageTemplate.or(resInform,MessageTemplate.MatchSender(x.getName()));
                         resources.add(x.getName());
                     }
+                    resConfirmation = MessageTemplate.and(resConfirmation,resInform);
+                    resDisconfirmation = MessageTemplate.and(resDisconfirmation,resInform);
                     resInform = MessageTemplate.and(resInform, MessageTemplate.MatchPerformative(ACLMessage.INFORM));
                     Collections.sort(resources);
                     if(testMode == TESTS_ENABLED) {
@@ -334,6 +342,9 @@ public class ResourceAgent extends Agent {
     }
 
     private void searchForBestContract(){
+        if (testMode == TESTS_ENABLED) {
+            System.out.println("Res #" + resName + ": contracts received by now: " + contractDetails);
+        }
         addBehaviour(markContracts);
         contractPointer = 0;
         bestContractValue = -4000;
@@ -393,14 +404,23 @@ public class ResourceAgent extends Agent {
     Behaviour voteStart = new OneShotBehaviour() {
         @Override
         public void action() {
-            String myVote = contractDetails.get(bestContractPointer).getContract().getJobName();
+            String myVote = generateBulletin();
             sendToResources(myVote);
             receiveVotesFromResources();
         }
     };
+    String generateBulletin(){
+        StringBuilder ret = new StringBuilder();
+        ret.append(contractDetails.get(bestContractPointer).getContract().getJobName()).append(",")
+                .append(contractDetails.get(bestContractPointer).getContract().getStart());
+        return ret.toString();
+    }
     void sendToResources(String message){
         messageToResources = message;
         resourceMessagePointer = 0;
+        if (testMode == TESTS_ENABLED){
+            System.out.println("Res #" + resName + ": switched to sending \"" + message +"\" to all other resources");
+        }
         addBehaviour(sendToAllResources);
     }
     Behaviour sendToAllResources = new CyclicBehaviour() {
@@ -428,27 +448,151 @@ public class ResourceAgent extends Agent {
         @Override
         public void action() {
             if (votes.size() == resources.size()) {
-                myAgent.addBehaviour(decideFirstRound);
+                startVoteCheck();
                 myAgent.removeBehaviour(getResourceVotes);
-                //System.out.println("Res #" + resName + ": got all votes" + now());
+                if (testMode == TESTS_ENABLED){
+                    System.out.println("Res #" + resName + ": got all votes" + now());
+                }
             }
             else{
-                String anotherMessage = receiveResourceOpinion();
-                if (!anotherMessage.isEmpty()){
-                    votes.add(Integer.parseInt(anotherMessage));
+                Pair<String,AID> anotherMessage = receiveResourceOpinion();
+                if (anotherMessage != null){
+                    if (testMode == TESTS_ENABLED) {
+                        System.out.println("Res #" + resName + ": got vote from another resource: "
+                                +anotherMessage.getValue0() );
+                    }
+                    if(checkVote(anotherMessage.getValue0())){
+                        sendConfirmation(anotherMessage.getValue1());
+                    }
+                    else{
+                        sendDisconfirmation(anotherMessage.getValue1());
+                    }
+                    votes.add(extractVote(anotherMessage.getValue0()));
                 }
             }
         }
     };
-    String receiveResourceOpinion(){
-        StringBuilder ret = new StringBuilder();
-        ACLMessage mes = receive(resInform);
+    Pair<String, AID> receiveResourceOpinion(){
+        Pair<String,AID> ret = null;
+        ACLMessage mes = receive(MessageTemplate.and(resInform,MessageTemplate.not(okOrNoMessage)));
         if (mes != null) {
-            ret.append(mes.getContent());
+            ret = new Pair<String, AID>(mes.getContent(),mes.getSender());
         }
-        return ret.toString();
+        return ret;
     }
 
+    int extractVote(String bulletin){
+        return Integer.parseInt(bulletin.split(",")[0]);
+    }
+    int extractControlNumber(String bulletin){
+        return Integer.parseInt(bulletin.split(",")[1]);
+    }
+    boolean checkVote(String bulletin){
+        MASolverContractDetails details = peekContractByContractor(extractVote(bulletin));
+        if (details == null){
+            return false;
+        }
+        if (details.getContract().getStart() != extractControlNumber(bulletin)){
+            return false;
+        }
+        return true;
+    }
+    void sendConfirmation(AID contact){
+        ACLMessage mes = new ACLMessage(ACLMessage.CONFIRM);
+        mes.addReceiver(contact);
+        send(mes);
+    }
+    void sendDisconfirmation(AID contact){
+        ACLMessage mes = new ACLMessage(ACLMessage.DISCONFIRM);
+        mes.addReceiver(contact);
+        send(mes);
+    }
+    void startVoteCheck(){
+        messageReceivedCounter = 0;
+        voteCheckPassed = true;
+        addBehaviour(firstVoteCheck);
+    }
+
+    Behaviour firstVoteCheck = new CyclicBehaviour() {
+        @Override
+        public void action() {
+            if (messageReceivedCounter == resources.size()) {
+                if (testMode == TESTS_ENABLED) {
+                    System.out.println("Res #" + resName + " finished getting replies. My Vote Credibility is: "
+                            + voteCheckPassed);
+                }
+                if (voteCheckPassed){
+                    sendToResources("OK");
+                }
+                else{
+                    sendToResources("NO");
+                }
+                proceedVoteCheck();
+                myAgent.removeBehaviour(firstVoteCheck);
+            }
+            else{
+                if (receivedConfirmation()){
+                    messageReceivedCounter++;
+                }
+                if (receivedDisconfirmation()){
+                    messageReceivedCounter++;
+                    voteCheckPassed = false;
+                }
+            }
+        }
+    };
+    boolean receivedConfirmation(){
+        ACLMessage msg  =  receive(resConfirmation);
+        return msg!= null;
+    }
+    boolean receivedDisconfirmation(){
+        ACLMessage msg  =  receive(resDisconfirmation);
+        return msg!= null;
+    }
+    void proceedVoteCheck(){
+        messageReceivedCounter = 0;
+        addBehaviour(secondVoteCheck);
+    }
+    Behaviour secondVoteCheck = new CyclicBehaviour() {
+        @Override
+        public void action() {
+            if (messageReceivedCounter == resources.size()) {
+                //System.out.println("Res #" + resName + " finished getting reports. Whole Vote Credibility is: "
+                        //+ voteCheckPassed);
+                voteCheckResultsProcessing();
+                myAgent.removeBehaviour(secondVoteCheck);
+                //System.out.println("Res #" + resName + ": got all votes" + now());
+            }
+            else{
+                if (receiveOK()) {
+                    messageReceivedCounter++;
+                }
+                if (receiveNO()){
+                    messageReceivedCounter++;
+                    voteCheckPassed = false;
+                }
+            }
+        }
+    };
+
+    private boolean receiveNO(){
+        ACLMessage msg = receive(MessageTemplate.and(resInform,noMessage));
+        return msg!=null;
+    }
+    private boolean receiveOK(){
+        ACLMessage msg = receive(MessageTemplate.and(resInform,okMessage));
+        return msg!=null;
+    }
+
+    private void voteCheckResultsProcessing(){
+        if(voteCheckPassed) {
+            addBehaviour(decideFirstRound);
+        }
+        else{
+            addTimer3();
+            addBehaviour(waitForFirstContract);
+        }
+    }
     Behaviour decideFirstRound =  new OneShotBehaviour(){
         @Override
         public void action(){
@@ -456,7 +600,7 @@ public class ResourceAgent extends Agent {
                 System.out.println("Res #" + resName + ": got these vote results: " + votes + "by " + now());
             }
             else{
-                MASolverContractDetails winnerContract = getContractByContractor(getWinnerContractor());
+                MASolverContractDetails winnerContract = takeContractByContractor(getWinnerContractor());
                 sendAccept(winnerContract.getContacts());
                 applyContract(winnerContract.getContract());
                 acceptedContracts++;
@@ -477,10 +621,15 @@ public class ResourceAgent extends Agent {
             }
         }
     };
-    MASolverContractDetails getContractByContractor(int contractor) {
+    MASolverContractDetails takeContractByContractor(int contractor) {
         int contractPlace = searchContractPlaceByContractor(contractor);
         if (contractPlace == -1) return null;
         return contractDetails.remove(contractPlace);
+    }
+    MASolverContractDetails peekContractByContractor(int contractor) {
+        int contractPlace = searchContractPlaceByContractor(contractor);
+        if (contractPlace == -1) return null;
+        return contractDetails.get(contractPlace);
     }
     int searchContractPlaceByContractor(int contractor){
         int ret = -1;

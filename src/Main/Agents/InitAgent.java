@@ -626,9 +626,9 @@ public class InitAgent extends Agent {
             System.err.println(ZonedDateTime.now().toString() +": " +
                     this.getAID().toString() + "encountered a problem on shutdown: " + e.toString());
         }
-        System.out.println("Trying to deregister myself");
+        //System.out.println("Trying to deregister myself");
         deregister();
-        System.out.println("Successfully shut down controllerAgent");
+        //System.out.println("Successfully shut down controllerAgent");
         super.takeDown();
     }
     private void sendResultToDB(int projectId, int result) {

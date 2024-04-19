@@ -31,7 +31,7 @@ public class JobAgent extends Agent {
             TEST_CONTRACT_BASE_MAKING = 5,TEST_SEND_CONTRACT = 6, TEST_SEND_CONTRACT_AGAIN = 7,
             TEST_SEND_ALL_CONTRACTS = 8, TEST_GET_FIRST_RESPONSE = 9, TEST_FULL_RUN = 10,
             TEST_MAKE_UNCONSTRAINED_SOLUTION = 11;
-    int testMode = TESTS_DISABLED, testProgram = TEST_FULL_RUN;
+    int testMode = TESTS_ENABLED, testProgram = TEST_FULL_RUN;
     String myContractBase;
     MessageTemplate resourceAccept, resourceDecline,request;
     @Override
@@ -76,7 +76,7 @@ public class JobAgent extends Agent {
         ServiceDescription sd = new ServiceDescription();
         sd.setType("job");
         sd.setName("job" + jobNumber);
-        System.out.println(jobNumber + ": " + sd.getName());
+        //System.out.println(jobNumber + ": " + sd.getName());
         dfd.addServices(sd);
         try {
             DFService.register(this, dfd);
@@ -349,7 +349,9 @@ public class JobAgent extends Agent {
                         myAgent.addBehaviour(sayTestsFinished);
                     }
                     else{
-                        System.out.println("Job #" + jobNumber + ": restarting contract sending procedure.");
+                        if (testMode == TESTS_ENABLED){
+                            System.out.println("Job #" + jobNumber + ": restarting contract sending procedure.");
+                        }
                         currentStartConstraint = startCorrection;
                         myAgent.addBehaviour(makeNewContractBase);
 
