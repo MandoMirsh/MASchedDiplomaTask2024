@@ -4,17 +4,24 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 
+
 public class Marker {
 
     static File answers;
+    public static final int BEST_RESULTS = 1, GREEDY_RESULTS = 2;
+    private static int answersSet = BEST_RESULTS;
     private static final String ANSWERS_30 = "j30hrs.sm", ANSWERS_60 = "j60hrs.sm",
             ANSWERS_90 = "j90hrs.sm", ANSWERS_120 = "j120hrs.sm", ANSWERS_MOCK = "",
-            DOC_DIR = "../Docs/Answers/";
+            GREEDY_30 = "j30gr.sm", GREEDY_60 = "j60gr.sm", GREEDY_90 = "j90gr.sm", GREEDY_120 = "j120gr.sm",
+            DOC_DIR = "../Docs/Answers";
     public static final int J30 = 3, J60 = 6, J90 = 9, J120 =12;
     private static final int SKIP_ANSWER_LIST_FIRST = 4;
     private static int res;
     private static int prefixLen = 3;
 
+    public static void setAnswerSet(int setName) {
+        answersSet = setName;
+    }
     public static void setResult ( int result) {
         res = result;
     }
@@ -49,11 +56,27 @@ public class Marker {
         return ANSWERS_MOCK;
     }
     private static  String answerFileName(int inputClass) {
+        switch (answersSet) {
+            case BEST_RESULTS ->{return bestFile(inputClass);}
+            case GREEDY_RESULTS -> {return greedyFile(inputClass);}
+            default -> {return bestFile(inputClass);}
+        }
+    }
+    private static String bestFile(int inputClass) {
         switch (inputClass) {
             case J30 -> {prefixLen = 3; return ANSWERS_30;}
             case J60 -> {prefixLen = 3; return ANSWERS_60;}
             case J90 -> {prefixLen = 3; return ANSWERS_90;}
             case J120 -> {prefixLen = 4; return ANSWERS_120;}
+            default -> { return ANSWERS_MOCK;}
+        }
+    }
+    private static String greedyFile(int inputClass) {
+        switch (inputClass) {
+            case J30 -> {prefixLen = 3; return GREEDY_30;}
+            case J60 -> {prefixLen = 3; return GREEDY_60;}
+            case J90 -> {prefixLen = 3; return GREEDY_90;}
+            case J120 -> {prefixLen = 4; return GREEDY_120;}
             default -> { return ANSWERS_MOCK;}
         }
     }
@@ -92,7 +115,7 @@ public class Marker {
 
     }
     public static int getSolutionMark(int problemSet, int dec, int pos) {
-        answers = new File(DOC_DIR + answerFileName(problemSet));
+        answers = new File(DOC_DIR + File.separator + answerFileName(problemSet));
         int answer = getAnswer(dec, pos);
         return res - answer;
     }

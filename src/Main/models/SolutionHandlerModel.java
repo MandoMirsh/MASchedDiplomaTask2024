@@ -25,6 +25,9 @@ public class SolutionHandlerModel implements SolutionHandler {
         commonTask = task;
     }
 
+    public void setMarkerMode(int markerMode){
+        Marker.setAnswerSet(markerMode);
+    }
 
     @Override
     public void startSolving() {
@@ -124,9 +127,9 @@ public class SolutionHandlerModel implements SolutionHandler {
     }
     private void setSolver(int solverId){
         switch(solverId) {
-            case SolutionControllerTaskDO.GREEDY_SOLVER -> {currentSolver = new GreedySolver(); solverName = "Greedy";}//GreedySolver();
-            case SolutionControllerTaskDO.CPLEX_SOLVER -> {currentSolver = new MockSolver(); solverName = "CPLEX";}//CPLEXSolver();
-            case SolutionControllerTaskDO.MA_SOLVER -> {currentSolver = new MASolver(); solverName = "Multi-Agent";}//MASolver();
+            case SolutionHandler.GREEDY_SOLVER -> {currentSolver = new GreedySolver(); solverName = "Greedy";}//GreedySolver();
+            //case SolutionControllerTaskDO.CPLEX_SOLVER -> {currentSolver = new MockSolver(); solverName = "CPLEX";}//CPLEXSolver();
+            case SolutionHandler.MULTI_AGENT_V1 -> {currentSolver = new MASolver(); solverName = "Multi-Agent";}//MASolver();
             default -> currentSolver = new MockSolver();
         }
     }

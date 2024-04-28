@@ -46,7 +46,7 @@ public class MainHandler {
     JButton btnNextMove = new JButton("Next");
     JButton btnStopMove = new JButton("Stop");
     JPanel panel = new JPanel();
-    JCheckBox automationCheckBox = new JCheckBox("Automate run");
+    JCheckBox markerRunConfiguration = new JCheckBox("mark vs greedy");
     JLabel lblNewLabel = new JLabel("Experiment Results");
     JSplitPane splitPane = new JSplitPane();
     JTextPane textPane = new JTextPane();
@@ -69,7 +69,7 @@ public class MainHandler {
         TopPanel.add(panel_1, BorderLayout.EAST);
         panel_1.add(btnNextMove);
         panel_1.add(btnStopMove);
-        TopPanel.add(automationCheckBox, BorderLayout.CENTER);
+        TopPanel.add(markerRunConfiguration, BorderLayout.CENTER);
         fileProcessingPane.add(panel, BorderLayout.WEST);
         panel.add(lblNewLabel);
         fileProcessingPane.add(splitPane, BorderLayout.CENTER);
@@ -83,6 +83,12 @@ public class MainHandler {
             @Override
             public void actionPerformed(ActionEvent e) {
                 spinnerHowManyFiles.setEnabled(!spinnerHowManyFiles.isEnabled());
+            }
+        });
+        markerRunConfiguration.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
             }
         });
         fileChooseButton.addActionListener(new ActionListener() {
@@ -199,10 +205,10 @@ public class MainHandler {
     }
     private int getSolverId( String buttonName) {
         if (buttonName.equals("Greedy Solver")){
-            return SolutionControllerTaskDO.GREEDY_SOLVER;
+            return SolutionHandler.GREEDY_SOLVER;
         }
         else{
-            return SolutionControllerTaskDO.MA_SOLVER;
+            return SolutionHandler.MULTI_AGENT_V1;
         }
     }
 
