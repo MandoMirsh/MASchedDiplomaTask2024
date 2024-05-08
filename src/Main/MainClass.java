@@ -17,9 +17,7 @@ import java.util.Properties;
 // then press Enter. You can now see whitespace characters in your code.
 public class MainClass {
     public static void main(String[] args) {
-        // Press Alt+Enter with your caret at the highlighted text to see how
-        // IntelliJ IDEA suggests fixing it.
-        //System.out.printf("Hello and welcome!");
+
         try {
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -28,17 +26,18 @@ public class MainClass {
                 }
             }
         } catch (Exception e) {
-            // If Nimbus is not available, fall back to cross-platform
+            //nimbus not available, fall back to system settings
             try {
                 UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
             } catch (Exception ex) {
-                // Not worth my time
+                //not really happening, otherwise we have bigger problems
             }
         }
 
-        // Press Shift+F10 or click the green arrow button in the gutter to run the code.
+
         JFrame frame = new JFrame("DiplomaPracticTask");
         frame.setContentPane(new MainForm3().getContentPane());
+        //frame.setContentPane(new MainHandler().getContentPane());
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
         frame.setBounds(100, 100, 720, 135);

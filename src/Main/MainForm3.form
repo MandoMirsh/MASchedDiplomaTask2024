@@ -50,18 +50,17 @@
                       <text value="Multi-Agent solver v1"/>
                     </properties>
                   </component>
-                  <component id="c8c87" class="javax.swing.JRadioButton" binding="rdbtnCPLEX">
+                  <component id="92604" class="javax.swing.JCheckBox" binding="checkAgainstGreedyCheckBox" default-binding="true">
                     <constraints>
-                      <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                      <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
-                      <enabled value="false"/>
-                      <text value="extra Option 1"/>
+                      <text value="check against greedy"/>
                     </properties>
                   </component>
-                  <vspacer id="1e041">
+                  <vspacer id="29dfb">
                     <constraints>
-                      <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
+                      <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
                     </constraints>
                   </vspacer>
                 </children>

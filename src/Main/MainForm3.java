@@ -16,17 +16,19 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.Enumeration;
+import java.util.Objects;
 
+import static javax.swing.JOptionPane.showMessageDialog;
 import static javax.swing.SwingUtilities.getRoot;
 
 public class MainForm3 {
+    private Timer timer;
     private JPanel mainPanel;
     private JPanel card1;
     private JPanel card2;
     private JPanel leftTaskPanel;
     private JRadioButton rdbtnGreedy;
     private JRadioButton rdbtnMultiAgent;
-    private JRadioButton rdbtnCPLEX;
     private JPanel centralTaskPanel;
     private JButton confirmButton;
     private JCheckBox automationCheckbox;
@@ -41,6 +43,7 @@ public class MainForm3 {
     private JTextPane textPane1;
     private JTable table;
     private JScrollPane tablePane;
+    private JCheckBox checkAgainstGreedyCheckBox;
     private ButtonGroup solverChooseBtnGroup;
     private JFileChooser fileChooser = new JFileChooser(Paths.get("").toAbsolutePath().toString());
     String[] columnNames = {"taskname", "solver", "result", "best", "Mark"};
@@ -52,7 +55,7 @@ public class MainForm3 {
     private TableLogger tableLogger = new TableLogger();
     private TextPaneLogger paneLogger = new TextPaneLogger();
     int extraRuns = 0;
-    SolutionHandler handler = new SolutionHandlerModel();//DummySolutionHandler();
+    SolutionHandler handler = new SolutionHandlerModel();//new DummySolutionHandler();
     public MainForm3() {
         int def = 0, lowBound = 0, upBound = 600, inc = 10;
         table.setModel(tableModel);
@@ -74,17 +77,29 @@ public class MainForm3 {
         confirmButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                tableLogger.setWriteInto(tableModel);
-                paneLogger.setWriteInto(textPane1);
+                if (!fileIsChosen()){
+                    showMessageDialog(confirmButton.getRootPane(),"Please choose file!",
+                                "File not chosen",JOptionPane.WARNING_MESSAGE );
+                }
+                else{
+                    if (automationCheckbox.isSelected()) {
+                        disableExperimentPanelButtons();
+                    }
+                    tableLogger.setWriteInto(tableModel);
+                    paneLogger.setWriteInto(textPane1);
 
-                handler.setProblem(getMainTask());
-                handler.setLog(paneLogger, tableLogger);
-                handler.makeReady();
-                handler.startSolving();
-                handler.finish();
-                setSecondVolumes();
-                nextCards();
+                    handler.setProblem(getMainTask());
+                    handler.setLog(paneLogger, tableLogger);
+                    handler.makeReady();
+                    nextCards();
+                    handler.startSolving();
+                    handler.finish();
+                    setSecondVolumes();
 
+                    if (automationCheckbox.isSelected()){
+                        automationRunExtra((Integer)spinnerHowManyFiles.getValue());
+                    }
+                }
             }
         });
         automationCheckbox.addActionListener(new ActionListener() {
@@ -124,8 +139,30 @@ public class MainForm3 {
                 }
             }
         });
+        checkAgainstGreedyCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (checkAgainstGreedyCheckBox.isSelected()){
+                    handler.setMarkerMode(Marker.GREEDY_RESULTS);
+                }
+                else{
+                    handler.setMarkerMode(Marker.BEST_RESULTS);
+                }
+            }
+        });
     }
 
+    boolean fileIsChosen(){
+        return !fileChooseTextField.getText().isEmpty();
+    }
+    private void disableExperimentPanelButtons(){
+        processControlSetEnabled(false);
+    }
+    private void automationRunExtra(int total){
+        for ( int i = 1; i < total; i++){
+            handler.runNext();
+        }
+    }
     public JPanel getContentPane() {
         return mainPanel;
     }
@@ -163,7 +200,7 @@ public class MainForm3 {
         if (!automation) {
             ret.setHowManyToProceed(1);
         }
-        ret.setSolver(getSolverId(getSelectedButtonText(solverChooseBtnGroup)));
+        ret.setSolver(getSolverId(Objects.requireNonNull(getSelectedButtonText(solverChooseBtnGroup))));
         return ret;
     }
     private String getSelectedButtonText(ButtonGroup buttonGroup) {
@@ -177,10 +214,10 @@ public class MainForm3 {
     }
     private int getSolverId(String buttonName) {
         if (buttonName.equals("Greedy Solver")){
-            return SolutionControllerTaskDO.GREEDY_SOLVER;
+            return SolutionHandler.GREEDY_SOLVER;
         }
         else{
-            return SolutionControllerTaskDO.MA_SOLVER;
+            return SolutionHandler.MULTI_AGENT_V1;
         }
     }
 }
