@@ -4,24 +4,35 @@ import Main.loggers.LogHandler;
 import Main.models.ProblemModel;
 import Main.models.TaskModel;
 
+import java.sql.Connection;
 import java.util.ArrayList;
 
 public class GreedySolver implements Solver{
     private ProblemModel currentTask;
-    private int solutionStatus = SOLUTION_UNSET;
+    private int solutionStatus = SOLUTION_NOT_SET;
     private LogHandler logPlace;
-    public static final int SOLUTION_SET = 1, SOLUTION_STARTED = 2, SOLUTION_FINISHED = 3,
-                            SOLUTION_RUN_ERROR = 4,SOLUTION_UNSET = 0;
+    public static final int SOLUTION_SET = 1, SOLUTION_STARTED = 2, SOLUTION_FINISHED = 3;
 
     private static final int TASK_BLOCKED = 3, TASK_READY = 2, TASK_SET = 1;
     private static final int SUPPORTED_SOLUTION_LEN = 500;
     private ArrayList<Integer> taskStatuses, predecessorsToGo, startPlaceSearch;
     private ArrayList<ArrayList<Integer>> resAvail = new ArrayList<ArrayList<Integer>>();
+    private Connection conn;
     @Override
     public void setTask(ProblemModel task) {
             currentTask = task;
             setUp();
             logPlace.write("Solver set up.");
+    }
+
+    @Override
+    public void setDBConnection(Connection connection) {
+        //conn3 = connection;
+    }
+
+    @Override
+    public void setTask(int taskId) {
+
     }
 
     @Override
@@ -43,7 +54,7 @@ public class GreedySolver implements Solver{
         logPlace.write("Trying to find a place for a job number: " + currentJob);
         setTaskPlace(taskPlace,currentJob);
         reserveResource(taskPlace, taskPlace + currentTask.getTasks().get(currentJob).getTimeNeed(),
-                        currentTask.getTasks().get(currentJob).getResourceNeed());
+                        currentTask.getTasks().get(currentJob).getResourceNeeds());
         taskStatuses.set(currentJob,TASK_SET);
         //Update Successors' predecessors unready numbers: minus one to every one
         updateSuccessors(taskPlace + currentJobTime, currentTask.getTasks().get(currentJob).getSuccessors());
@@ -106,7 +117,7 @@ public class GreedySolver implements Solver{
     private int findTaskPlace(int taskNum) {
         int possibleStart = startPlaceSearch.get(taskNum);
         int timeNeed = currentTask.getTasks().get(taskNum).getTimeNeed();
-        ArrayList<Integer> resToReserve = currentTask.getTasks().get(taskNum).getResourceNeed();
+        ArrayList<Integer> resToReserve = currentTask.getTasks().get(taskNum).getResourceNeeds();
         int clearUpto = possibleStart + 1;
         while (clearUpto != possibleStart) {
             clearUpto = checkAvail(possibleStart, possibleStart + timeNeed, resToReserve);
